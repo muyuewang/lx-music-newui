@@ -21,9 +21,10 @@ import { usePressScale } from '@/components/liquid/animation'
 import {
   TIDE_COLOR,
   TIDE_GLASS_CTRL,
-  TIDE_GRADIENT,
   TIDE_RADIUS,
   TIDE_TYPE,
+  createThemedStyle,
+  useTideGradient,
 } from '@/components/liquid/tide'
 import { useReadableText } from '@/components/liquid/useReadableText'
 import { MUSIC_TOGGLE_MODE, LIST_IDS } from '@/config/constant'
@@ -235,20 +236,22 @@ const PlayBtn = memo(({ isPlay, onPress, diameter }: {
   diameter: number
 }) => {
   const { scale, pressIn, pressOut } = usePressScale()
+  const gradient = useTideGradient()
 
   return (
     // 主播放键是全 App 第三处品牌渐变（首页 Hero 键、播放条进度线为前两处）。
-    // 渐变圆 + 深色图标：在模糊封面背景上这是唯一「发光」的实体，
+    // 渐变圆 + onAccent 图标：在模糊封面背景上这是唯一「发光」的实体，
     // 屏幕上只允许出现这一个渐变焦点。
+    // 图标色不能写死近黑 —— 浅色主题的渐变被压深了，近黑会糊进去。
     <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} hitSlop={8}>
       <Animated.View style={{ transform: [{ scale }] }}>
         <GradientView
-          colors={TIDE_GRADIENT}
+          colors={gradient}
           direction="vertical"
           radius={999}
           style={[styles.playBtn, { width: diameter, height: diameter }]}
         >
-          <Icon name={isPlay ? 'pause' : 'play'} size={30} color="#0B0D16" />
+          <Icon name={isPlay ? 'pause' : 'play'} size={30} color={TIDE_COLOR.onAccent} />
         </GradientView>
       </Animated.View>
     </Pressable>
@@ -373,7 +376,8 @@ export default memo(() => {
   // 玻璃上的文字颜色按当前玻璃底色动态挑选，保证对比度 ≥ 4.5:1
   const readable = useReadableText()
 
-  const handleTogglePlay = () => { void togglePlay() }
+  // togglePlay 是同步函数、本身就返回 void，不能再套一层 void（void of void）
+  const handleTogglePlay = () => { togglePlay() }
   const handlePrev = () => { void playPrev() }
   const handleNext = () => { void playNext() }
   // 左上角「收起」：播放页现在是 Tab，收起等价于回到上一个 Tab
@@ -552,7 +556,7 @@ export default memo(() => {
   )
 })
 
-const styles = StyleSheet.create({
+const styles = createThemedStyle(() => (StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 22,
@@ -753,4 +757,4 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
   },
-})
+})))

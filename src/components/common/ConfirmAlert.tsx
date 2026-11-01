@@ -6,9 +6,10 @@ import { createStyle } from '@/utils/tools'
 import { useI18n } from '@/lang/index'
 import { useTheme } from '@/store/theme/hook'
 import Text from './Text'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   main: {
     // flexGrow: 0,
     flexShrink: 1,
@@ -64,7 +65,7 @@ const styles = createStyle({
   btnReversedDirection: {
     marginLeft: 15,
   },
-})
+})))
 
 export interface ConfirmAlertProps {
   onCancel?: () => void
@@ -104,7 +105,7 @@ export default forwardRef<ConfirmAlertType, ConfirmAlertProps>(({
   reverseBtn = false,
 }: ConfirmAlertProps, ref) => {
   const theme = useTheme()
-  const isTide = theme.id === 'liquid_glass'
+  const isTide = isLiquidGlass(theme)
   const t = useI18n()
 
   const dialogRef = useRef<DialogType>(null)

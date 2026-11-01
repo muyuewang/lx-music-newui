@@ -8,7 +8,8 @@ import {
 
 import { getSpectrum, setSpectrumEnabled } from './native'
 import GradientView from './GradientView'
-import { TIDE_COLOR, TIDE_GRADIENT } from './tide'
+import { TIDE_COLOR, useTideGradient } from './tide'
+import { useTheme } from '@/store/theme/hook'
 import {
   GLASS_SHADOW_OPACITY,
   GLASS_SHADOW_RADIUS,
@@ -60,8 +61,16 @@ export default memo(({
   onSeekEnd,
   height = 6,
   spectrum = true,
-  trackColor = 'rgba(255, 255, 255, 0.22)',
+  trackColor,
 }: Props) => {
+  // 品牌渐变必须走 hook：静态数组在模块加载时就固化成深色主题的紫青色
+  const gradient = useTideGradient()
+  // 玻璃管（未播段）与高光在浅色底上不能再用「加白」，
+  // 否则白 0.22 直接融进浅色背景，整条轨道消失。
+  const isLight = !useTheme().isDark
+  const defaultTrackColor = isLight ? 'rgba(14, 17, 27, 0.12)' : 'rgba(255, 255, 255, 0.22)'
+  const glossColor = isLight ? 'rgba(255, 255, 255, 0.70)' : 'rgba(255, 255, 255, 0.24)'
+  const knobColor = isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(255, 255, 255, 0.94)'
   const [width, setWidth] = useState(0)
   const [bands, setBands] = useState<number[] | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -93,7 +102,7 @@ export default memo(({
     const timer = setInterval(() => {
       if (!alive) return
       void getSpectrum().then(res => {
-        if (alive && res && res.length) setBands(res)
+        if (alive && res?.length) setBands(res)
       })
     }, SPECTRUM_POLL_INTERVAL)
     return () => {
@@ -163,7 +172,7 @@ export default memo(({
    * 像渲染错位而不是频谱。
    */
   const fillBars = useMemo(() => {
-    if (!bands || !bands.length || !width) return null
+    if (!bands?.length || !width) return null
 
     const playedWidth = width * displayRatio
     if (playedWidth < 1) return null
@@ -214,7 +223,7 @@ export default memo(({
       <View style={styles.hitArea} pointerEvents="none">
         {/* 轨道底：玻璃管 */}
         <View
-          style={[styles.track, { height, top: trackTop, backgroundColor: trackColor }]}
+          style={[styles.track, { height, top: trackTop, backgroundColor: trackColor ?? defaultTrackColor }]}
         />
 
         {/* 已播放段：紫 → 青品牌渐变。
@@ -234,7 +243,7 @@ export default memo(({
                 ]}
               >
                 <GradientView
-                  colors={TIDE_GRADIENT}
+                  colors={gradient}
                   direction="horizontal"
                   steps={36}
                   radius={height / 2}
@@ -249,7 +258,7 @@ export default memo(({
 
         {/* 玻璃管的顶部高光 */}
         <View
-          style={[styles.gloss, { top: trackTop, height: Math.max(1, height * 0.38), width }]}
+          style={[styles.gloss, { top: trackTop, height: Math.max(1, height * 0.38), width, backgroundColor: glossColor }]}
         />
 
         {/* 拖动柄：玻璃小球 */}
@@ -263,6 +272,7 @@ export default memo(({
                     top: trackTop + (height - 14) / 2,
                     transform: [{ scale: dragging ? 1.35 : 1 }],
                     borderColor: TIDE_COLOR.a2,
+                    backgroundColor: knobColor,
                   },
                 ]}
               />
@@ -302,7 +312,6 @@ const styles = StyleSheet.create({
   },
   bar: {
     position: 'absolute',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
   },
   // 玻璃管顶部的一线高光
   gloss: {
@@ -311,7 +320,6 @@ const styles = StyleSheet.create({
     top: 0,
     borderTopLeftRadius: 999,
     borderTopRightRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.24)',
   },
   knob: {
     position: 'absolute',
@@ -319,7 +327,6 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,

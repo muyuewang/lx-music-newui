@@ -10,7 +10,8 @@ import { scaleSizeH } from '@/utils/pixelRatio'
 import { SETTING_SCREENS, type SettingScreenIds } from '../Main'
 import { useI18n } from '@/lang'
 import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 type FlatListType = FlatListProps<SettingScreenIds>
 
@@ -25,7 +26,7 @@ const ListItem = memo(({ id, activeId, onPress }: {
   const t = useI18n()
 
   const active = activeId == id
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
 
   const handlePress = () => {
     onPress(id)
@@ -55,7 +56,7 @@ export default ({ onChangeId }: {
   onChangeId: (id: SettingScreenIds) => void
 }) => {
   const flatListRef = useRef<FlatList>(null)
-  const isLiquid = useTheme().id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(useTheme())
   const [activeId, setActiveId] = useState(global.lx.settingActiveId)
 
   const handleChangeId = (id: SettingScreenIds) => {
@@ -97,7 +98,7 @@ export default ({ onChangeId }: {
 }
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideContent: {
     paddingBottom: DOCK_CONTENT_BOTTOM,
   },
@@ -149,5 +150,5 @@ const styles = createStyle({
     paddingLeft: 5,
     // backgroundColor: 'rgba(0,0,0,0.1)',
   },
-})
+})))
 

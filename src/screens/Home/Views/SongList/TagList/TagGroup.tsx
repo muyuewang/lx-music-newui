@@ -5,7 +5,8 @@ import { type TagInfoItem } from '@/store/songlist/state'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
 import Text from '@/components/common/Text'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export interface TagGroupProps {
   name: string
@@ -27,17 +28,17 @@ export default ({ name, list, onTagChange, activeId }: TagGroupProps) => {
         {list.map(item => (
           activeId == item.id
             ? (
-                <View style={[styles.tagButton, { backgroundColor: theme['c-button-background'] }, theme.id === 'liquid_glass' && styles.tideTag, theme.id === 'liquid_glass' && activeId == item.id && styles.tideActive]} key={item.id}>
-                  <Text style={styles.tagButtonText} color={theme.id === 'liquid_glass' ? TIDE_COLOR.a2 : theme['c-primary-font-active']}>{item.name}</Text>
+                <View style={[styles.tagButton, { backgroundColor: theme['c-button-background'] }, isLiquidGlass(theme) && styles.tideTag, isLiquidGlass(theme) && activeId == item.id && styles.tideActive]} key={item.id}>
+                  <Text style={styles.tagButtonText} color={isLiquidGlass(theme) ? TIDE_COLOR.a2 : theme['c-primary-font-active']}>{item.name}</Text>
                 </View>
               )
             : (
                 <Button
-                  style={[styles.tagButton, { backgroundColor: theme['c-button-background'] }, theme.id === 'liquid_glass' && styles.tideTag, theme.id === 'liquid_glass' && activeId == item.id && styles.tideActive]}
+                  style={[styles.tagButton, { backgroundColor: theme['c-button-background'] }, isLiquidGlass(theme) && styles.tideTag, isLiquidGlass(theme) && activeId == item.id && styles.tideActive]}
                   key={item.id}
                   onPress={() => { onTagChange(item.name, item.id) }}
                 >
-                  <Text style={styles.tagButtonText} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t2 : theme['c-font']} >{item.name}</Text>
+                  <Text style={styles.tagButtonText} color={isLiquidGlass(theme) ? TIDE_COLOR.t2 : theme['c-font']} >{item.name}</Text>
                 </Button>
               )
 
@@ -47,7 +48,7 @@ export default ({ name, list, onTagChange, activeId }: TagGroupProps) => {
   )
 }
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideTag: {
     borderRadius: TIDE_RADIUS.pill,
     backgroundColor: TIDE_COLOR.fillMid,
@@ -82,4 +83,4 @@ const styles = createStyle({
     paddingTop: 8,
     paddingBottom: 8,
   },
-})
+})))

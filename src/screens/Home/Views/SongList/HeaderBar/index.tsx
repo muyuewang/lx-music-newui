@@ -15,6 +15,7 @@ import { type Source } from '@/store/songlist/state'
 import { useTheme } from '@/store/theme/hook'
 import Tag, { type TagType, type TagProps } from './Tag'
 import OpenList, { type OpenListType } from './OpenList'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 // import { BorderWidths } from '@/theme'
 
 export interface HeaderBarProps {
@@ -46,7 +47,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
 
 
   return (
-    <View style={[styles.searchBar, theme.id === 'liquid_glass' && { height: 48, paddingVertical: 4 }]}>
+    <View style={[styles.searchBar, isLiquidGlass(theme) && { height: 48, paddingVertical: 4 }]}>
       <SortTab ref={sortTabRef} onSortChange={onSortChange} />
       <Tag ref={tagRef} onTagChange={onTagChange} />
       <OpenList ref={openListRef} />

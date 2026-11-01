@@ -4,7 +4,8 @@ import { useI18n } from '@/lang'
 import { createStyle } from '@/utils/tools'
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import { useTheme } from '@/store/theme/hook'
-import { TIDE_COLOR, TIDE_RADIUS } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 
 export interface CurrentTagBtnProps {
@@ -28,14 +29,14 @@ export default forwardRef<CurrentTagBtnType, CurrentTagBtnProps>(({ onShowList }
   }))
 
   return (
-    <Button style={[styles.btn, theme.id === 'liquid_glass' && styles.tideButton]} onPress={onShowList}>
+    <Button style={[styles.btn, isLiquidGlass(theme) && styles.tideButton]} onPress={onShowList}>
       <Text style={styles.sourceMenu}>{name}</Text>
     </Button>
   )
 })
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideButton: {
     borderRadius: TIDE_RADIUS.pill,
     borderWidth: 1,
@@ -57,4 +58,4 @@ const styles = createStyle({
     // paddingTop: 10,
     // paddingBottom: 10,
   },
-})
+})))

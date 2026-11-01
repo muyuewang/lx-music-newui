@@ -7,7 +7,8 @@ import { scaleSizeW } from '@/utils/pixelRatio'
 import { NAV_SHEAR_NATIVE_IDS } from '@/config/constant'
 import { useTheme } from '@/store/theme/hook'
 import Image from '@/components/common/Image'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 // 水平只留 6dp 给列间分隔（由 columnWrapperStyle 的 space-evenly 均分），
 // 原实现 itemWidth 减 15 却额外加四周 margin 10，水平实际占用超过分配宽度，
@@ -29,15 +30,15 @@ export default memo(({ item, index, width, showSource, onPress }: {
     item.source
       ? (
           <View style={{ ...styles.listItem, width: itemWidth }}>
-            <View style={{ ...styles.listItemImg, backgroundColor: theme.id === 'liquid_glass' ? TIDE_COLOR.fillMid : theme['c-content-background'] }}>
+            <View style={{ ...styles.listItemImg, backgroundColor: isLiquidGlass(theme) ? TIDE_COLOR.fillMid : theme['c-content-background'] }}>
               <TouchableOpacity activeOpacity={0.5} onPress={handlePress}>
                 <Image url={item.img} nativeID={`${NAV_SHEAR_NATIVE_IDS.songlistDetail_pic}_from_${item.id}`} style={{ width: itemWidth, height: itemWidth, borderRadius: TIDE_RADIUS.sm }} />
-                { theme.id === 'liquid_glass' ? <View pointerEvents="none" style={styles.tideCoverEdge} /> : null }
+                { isLiquidGlass(theme) ? <View pointerEvents="none" style={styles.tideCoverEdge} /> : null }
                 { showSource ? <Text style={styles.sourceLabel} size={9} color="#fff" >{item.source}</Text> : null }
               </TouchableOpacity>
             </View>
             <TouchableOpacity activeOpacity={0.5} onPress={handlePress}>
-              <Text style={[styles.listItemTitle, theme.id === 'liquid_glass' && TIDE_TYPE.body.style]} size={TIDE_TYPE.body.size} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t1 : theme['c-font']} numberOfLines={ 2 }>{item.name}</Text>
+              <Text style={[styles.listItemTitle, isLiquidGlass(theme) && TIDE_TYPE.body.style]} size={TIDE_TYPE.body.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t1 : theme['c-font']} numberOfLines={ 2 }>{item.name}</Text>
             </TouchableOpacity>
             {/* <Text>{JSON.stringify(item)}</Text> */}
           </View>
@@ -46,7 +47,7 @@ export default memo(({ item, index, width, showSource, onPress }: {
   )
 })
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideCoverEdge: {
     position: 'absolute',
     top: 0,
@@ -98,4 +99,4 @@ const styles = createStyle({
     // 这里只留行距，避免和字阶 token 打架
     marginBottom: 4,
   },
-})
+})))

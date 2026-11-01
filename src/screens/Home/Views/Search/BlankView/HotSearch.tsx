@@ -7,7 +7,8 @@ import Text from '@/components/common/Text'
 import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 
 interface ListProps {
@@ -26,8 +27,8 @@ const ListItem = ({ keyword, onSearch }: {
 }) => {
   const theme = useTheme()
   return (
-    <Button style={[styles.button, { backgroundColor: theme['c-button-background'] }, theme.id === 'liquid_glass' && styles.tideChip]} onPress={() => { onSearch(keyword) }}>
-      <Text color={theme.id === 'liquid_glass' ? TIDE_COLOR.t2 : theme['c-button-font']} size={13}>{keyword}</Text>
+    <Button style={[styles.button, { backgroundColor: theme['c-button-background'] }, isLiquidGlass(theme) && styles.tideChip]} onPress={() => { onSearch(keyword) }}>
+      <Text color={isLiquidGlass(theme) ? TIDE_COLOR.t2 : theme['c-button-font']} size={13}>{keyword}</Text>
     </Button>
   )
 }
@@ -60,7 +61,7 @@ export default forwardRef<HotSearchType, ListProps>((props, ref) => {
     list.length
       ? (
           <ScrollView>
-            <Text style={[styles.title, theme.id === 'liquid_glass' && styles.tideTitle]} size={theme.id === 'liquid_glass' ? TIDE_TYPE.headline.size : 16}>{t('search_hot_search')}</Text>
+            <Text style={[styles.title, isLiquidGlass(theme) && styles.tideTitle]} size={isLiquidGlass(theme) ? TIDE_TYPE.headline.size : 16}>{t('search_hot_search')}</Text>
             <View style={styles.list}>
               {
                 list.map(keyword => <ListItem keyword={keyword} key={keyword} onSearch={props.onSearch} />)
@@ -73,7 +74,7 @@ export default forwardRef<HotSearchType, ListProps>((props, ref) => {
 })
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideTitle: {
     ...TIDE_TYPE.headline.style,
     paddingTop: TIDE_SPACE.section,
@@ -111,4 +112,4 @@ const styles = createStyle({
     marginRight: 10,
     marginTop: 8,
   },
-})
+})))

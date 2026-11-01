@@ -6,7 +6,8 @@ import Button from '@/components/common/Button'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
 import { BorderWidths } from '@/theme'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export type SelectMode = 'single' | 'range'
 
@@ -101,7 +102,7 @@ export default forwardRef<MultipleModeBarType, MultipleModeBarProps>(({ onSelect
     ...styles.container,
     // backgroundColor: theme['c-content-background'],
     borderBottomColor: theme['c-border-background'],
-    ...(theme.id === 'liquid_glass' ? styles.tideBar : {}),
+    ...(isLiquidGlass(theme) ? styles.tideBar : {}),
     opacity: visibleBar ? animFade : 0, // Bind opacity to animated value
     transform: [
       { translateY: animTranslateY },
@@ -118,10 +119,10 @@ export default forwardRef<MultipleModeBarType, MultipleModeBarProps>(({ onSelect
     return (
       <Animated.View style={animaStyle}>
         <View style={styles.switchBtn}>
-          <Button onPress={() => { onSwitchMode('single') }} style={{ ...styles.btn, borderRadius: theme.id === 'liquid_glass' ? TIDE_RADIUS.pill : 0, backgroundColor: selectMode == 'single' ? (theme.id === 'liquid_glass' ? TIDE_COLOR.fillTop : theme['c-button-background']) : 'rgba(0,0,0,0)' }}>
+          <Button onPress={() => { onSwitchMode('single') }} style={{ ...styles.btn, borderRadius: isLiquidGlass(theme) ? TIDE_RADIUS.pill : 0, backgroundColor: selectMode == 'single' ? (isLiquidGlass(theme) ? TIDE_COLOR.fillTop : theme['c-button-background']) : 'rgba(0,0,0,0)' }}>
             <Text color={theme['c-button-font']}>{global.i18n.t('list_select_single')}</Text>
           </Button>
-          <Button onPress={() => { onSwitchMode('range') }} style={{ ...styles.btn, borderRadius: theme.id === 'liquid_glass' ? TIDE_RADIUS.pill : 0, backgroundColor: selectMode == 'range' ? (theme.id === 'liquid_glass' ? TIDE_COLOR.fillTop : theme['c-button-background']) : 'rgba(0,0,0,0)' }}>
+          <Button onPress={() => { onSwitchMode('range') }} style={{ ...styles.btn, borderRadius: isLiquidGlass(theme) ? TIDE_RADIUS.pill : 0, backgroundColor: selectMode == 'range' ? (isLiquidGlass(theme) ? TIDE_COLOR.fillTop : theme['c-button-background']) : 'rgba(0,0,0,0)' }}>
             <Text color={theme['c-button-font']}>{global.i18n.t('list_select_range')}</Text>
           </Button>
         </View>
@@ -138,7 +139,7 @@ export default forwardRef<MultipleModeBarType, MultipleModeBarProps>(({ onSelect
   return !visible && animatePlayed ? null : component
 })
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideBar: {
     borderRadius: TIDE_RADIUS.md,
     borderWidth: 1,
@@ -169,4 +170,4 @@ const styles = createStyle({
     alignItems: 'center',
     justifyContent: 'center',
   },
-})
+})))

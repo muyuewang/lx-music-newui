@@ -5,6 +5,7 @@ import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
 import Text from '@/components/common/Text'
 import { TIDE_COLOR, TIDE_TYPE } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export interface ActiveListNameProps {
   onShowBound: () => void
@@ -25,7 +26,7 @@ export default forwardRef<ActiveListNameType, ActiveListNameProps>(({ onShowBoun
 
   return (
     <TouchableOpacity onPress={onShowBound} style={styles.currentList}>
-      <Text numberOfLines={1} style={[styles.currentListText, theme.id === 'liquid_glass' && TIDE_TYPE.headline.style]} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t1 : theme['c-button-font']}>{currentListName}</Text>
+      <Text numberOfLines={1} style={[styles.currentListText, isLiquidGlass(theme) && TIDE_TYPE.headline.style]} color={isLiquidGlass(theme) ? TIDE_COLOR.t1 : theme['c-button-font']}>{currentListName}</Text>
     </TouchableOpacity>
   )
 })

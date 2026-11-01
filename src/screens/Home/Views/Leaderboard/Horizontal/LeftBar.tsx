@@ -13,6 +13,7 @@ import boardState, { type InitState } from '@/store/leaderboard/state'
 import { useTheme } from '@/store/theme/hook'
 import { getBoardsList } from '@/core/leaderboard'
 import { TIDE_COLOR } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 type Sources = Readonly<InitState['sources']>
 // type SourceSelectorProps = _SourceSelectorProps<Sources>
@@ -68,7 +69,7 @@ export default forwardRef<LeftBarType, LeftBarProps>(({ onChangeList }, ref) => 
   }
 
   return (
-    <View style={{ ...styles.container, borderRightColor: theme.id === 'liquid_glass' ? TIDE_COLOR.edgeSoft : theme['c-list-header-border-bottom'] }}>
+    <View style={{ ...styles.container, borderRightColor: isLiquidGlass(theme) ? TIDE_COLOR.edgeSoft : theme['c-list-header-border-bottom'] }}>
       <View style={styles.selector}>
         <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} />
       </View>

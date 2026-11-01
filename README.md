@@ -1,70 +1,134 @@
-<p align="center"><a href="https://github.com/lyswhut/lx-music-mobile"><img width="200" src="https://github.com/lyswhut/lx-music-mobile/blob/master/doc/images/icon.png" alt="lx-music logo"></a></p>
+<p align="center"><img width="200" src="https://github.com/lyswhut/lx-music-mobile/blob/master/doc/images/icon.png" alt="lx-music logo"></p>
 
-<h1 align="center">LX Music 移动版</h1>
+<h1 align="center">LX Music 移动版 · 液态玻璃界面重制</h1>
+
+<p align="center">基于 <a href="https://github.com/lyswhut/lx-music-mobile">lx-music-mobile</a> v1.9.1 的界面重制分支</p>
 
 <p align="center">
-  <a href="https://github.com/lyswhut/lx-music-mobile/releases"><img src="https://img.shields.io/github/release/lyswhut/lx-music-mobile" alt="Release version"></a>
-  <a href="https://github.com/lyswhut/lx-music-mobile/actions/workflows/release.yml"><img src="https://github.com/lyswhut/lx-music-mobile/workflows/Build/badge.svg" alt="Build status"></a>
-  <a href="https://github.com/lyswhut/lx-music-mobile/actions/workflows/beta-pack.yml"><img src="https://github.com/lyswhut/lx-music-mobile/workflows/Build%20Beta/badge.svg" alt="Build status"></a>
-  <a href="https://github.com/facebook/react-native"><img src="https://img.shields.io/github/package-json/dependency-version/lyswhut/lx-music-mobile/react-native/master" alt="React native version"></a>
-  <!-- <a href="https://github.com/lyswhut/lx-music-mobile/releases"><img src="https://img.shields.io/github/downloads/lyswhut/lx-music-mobile/latest/total" alt="Downloads"></a> -->
-  <a href="https://github.com/lyswhut/lx-music-mobile/tree/dev"><img src="https://img.shields.io/github/package-json/v/lyswhut/lx-music-mobile/dev" alt="Dev branch version"></a>
-  <!-- <a href="https://github.com/lyswhut/lx-music-mobile/blob/master/LICENSE"><img src="https://img.shields.io/github/license/lyswhut/lx-music-mobile" alt="License"></a> -->
+  <img src="https://img.shields.io/badge/React%20Native-0.73.11-61dafb" alt="React Native">
+  <img src="https://img.shields.io/badge/Android-5.0%2B-3ddc84" alt="Android">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue" alt="License">
 </p>
 
-<p align="center">一个基于 React Native 开发的音乐软件</p>
+---
 
-## 说明
+## 这是什么
 
-所用技术栈：
+这是 [lx-music-mobile](https://github.com/lyswhut/lx-music-mobile) 的一个**界面重制分支**。
 
-- React Native
-- Redux
+播放、音源、列表、收藏、设置等业务能力全部沿用上游，重做的只有视觉层与交互细节：
+一套名为 **TIDE** 的设计系统，以及建立在其上的两套液态玻璃主题。
 
-已支持的平台：
+与上游最大的区别是主题的取舍 —— 这里**只保留两套主题**：
 
-- Android 5 及以上
+| 主题 | id | 说明 |
+| --- | --- | --- |
+| 液态玻璃 | `liquid_glass` | 近黑底 + 白字 + 紫→青品牌渐变 |
+| 液态玻璃·浅色 | `liquid_glass_light` | 冷白底 + 近黑字，同一套玻璃材质 |
 
-***注：目前没有计划支持 iOS 和 HarmonyOS NEXT**。*<br>
-*桌面版项目地址：<https://github.com/lyswhut/lx-music-desktop>*<br>
-*LX Music 项目发展调整与新项目计划：https://github.com/lyswhut/lx-music-desktop/issues/1912*
+上游原有的十余套纯配色主题已被移除。原因很直接：TIDE 页面用的是一整套独立的玻璃令牌（近黑底、白字、品牌渐变、模糊层、描边），那些主题的配色根本作用不到这些页面上 —— 选中后画面几乎不变，等于给用户十几个点了没反应的按钮。
 
-软件变化请查看[更新日志](https://github.com/lyswhut/lx-music-mobile/blob/master/CHANGELOG.md)。
+## 液态玻璃是怎么实现的
 
-软件下载请查看 [GitHub Releases](https://github.com/lyswhut/lx-music-mobile/releases)。
+两套主题共用**同一条渲染路径**，深浅差异全部由运行时调色板承担。这是本分支几个关键决定的由来。
 
-使用常见问题请参阅[移动版常见问题](https://lyswhut.github.io/lx-music-doc/mobile/faq)。
+### 1. 调色板是运行时可切换的
 
-目前本项目的原始发布地址只有 [**GitHub**](https://github.com/lyswhut/lx-music-mobile/releases)，其他渠道均为第三方转载发布，与本项目无关！
+`TIDE_COLOR` 不是普通常量对象，而是一个 `Proxy`，每次读取都转发到当前生效的 `PALETTE_DARK` 或 `PALETTE_LIGHT`。
 
-为了提高使用门槛，本软件内的默认设置、UI 操作不以新手友好为目标，所以使用前建议先根据你的喜好浏览调整一遍软件设置，阅读一遍[音乐播放列表机制](https://lyswhut.github.io/lx-music-doc/mobile/faq/playlist)。
+之所以这么做：全工程有 160 多处 `TIDE_COLOR.t1` 这样的引用，绝大多数写在 JSX 属性里（`color={TIDE_COLOR.t1}`）。如果它是一个固定对象，切到浅色主题后这些引用仍返回深色值 —— 白色文字配白色背景，整页内容直接消失。用 Proxy 转发后，这 160 多处一行都不用改。
 
-### 数据同步服务
+切换动作发生在 `ThemeProvider` 的渲染期（不是 `useEffect`）。因为子组件正是在这次渲染中读取调色板，放到副作用里会先出现一帧「浅色背景 + 深色文字」的错误画面。
 
-从 v1.0.0 起，我们发布了一个独立的[数据同步服务](https://github.com/lyswhut/lx-music-sync-server#readme)。如果你有服务器，可以将其部署到服务器上作为私人多端同步服务使用，详情看该项目说明。
+### 2. 样式表也必须跟着重建
 
-## 贡献代码
+`StyleSheet.create()`（以及项目内的 `createStyle()`，它内部就是转调它）会在**模块加载那一刻**把样式对象求值并固化。写在里面的 `TIDE_COLOR.bgElev` 读到的永远是首次加载时的调色板 —— Proxy 转发救不回已经被写进样式表的字符串。
 
-本项目欢迎 PR，但为了 PR 能顺利合并，需要注意以下几点：
+结果是切到浅色后，弹窗、菜单、搜索栏、侧边导航这些「颜色写在样式表里」的位置仍然是深色底，浅色界面里突然冒出几块黑卡。
 
-- 对于添加新功能的 PR，建议在提交 PR 前先创建 Issue 进行说明，以确认该功能是否确实需要；
-- 对于修复 bug 的 PR，请提供修复前后的说明及重现方式；
-- 对于其他类型的 PR，则适当附上说明。
+解法是 `createThemedStyle()`：把样式表包成一个 Proxy，读取时先比对当前明暗，不一致就重建一次并缓存。30 个文件的调用点全部不用改，源码里仍然是 `styles.sideDot`。
 
-贡献代码步骤：
+### 3. 浅色不是「深色取反」
 
-1. 参照[源码使用方法](https://lyswhut.github.io/lx-music-doc/mobile/use-source-code)设置开发环境；
-2. 克隆本仓库代码并切换至 `dev` 分支进行开发；
-3. 提交 PR 至 `dev` 分支。
+浅色玻璃的物理特性和深色完全不同，直接取反会得到一套读不清的界面：
 
-<!--
-## 用户界面
+- **填充**：白雾在浅底上不起提亮作用，玻璃必须比背景**更亮**才浮得起来，所以 `fill` 系列是中高不透明度的纯白。
+- **描边**：深色靠白色内描边从近黑背景里浮起来；同样的白线压在冷白底上等于没画。浅色改用「暗描边 + 更亮的顶部高光」，边界由暗线定义，受光感由高光定义。
+- **品牌色**：原来的浅紫 `#B7A6FF` 在白底上对比度只有 1.7:1，必须压深到 `#6D4DE0` / `#0E7E9C`。
+- **渐变上的图标**：渐变被压深后，原来压在渐变上的近黑图标会糊进去，因此新增 `onAccent` 令牌 —— 深色主题用近黑，浅色主题用白。
 
-<p><img width="100%" src="https://github.com/lyswhut/lx-music-mobile/blob/master/doc/images/app.png" alt="lx-music mobile UI"></p> -->
+### 4. 文字层级按实测对比度定档
 
-## 项目协议
+深色的白字压在近黑底上，0.38 的透明度还有 3.47:1；但浅色是「近黑字压接近纯白的底」，同样的 0.40 只剩 2.58:1 —— 层级看起来一样，实际比深色更差。所以浅色单独定档：
 
-本项目基于 [Apache License 2.0](https://github.com/lyswhut/lx-music-mobile/blob/master/LICENSE) 许可证发行，以下协议是对于 Apache License 2.0 的补充，如有冲突，以以下协议为准。
+| 令牌 | 透明度 | 相对 `#EEF1F7` | 相对 `#FFFFFF` |
+| --- | --- | --- | --- |
+| `t1` 标题 | 0.94 | 14.70:1 | 16.44:1 |
+| `t2` 正文 | 0.68 | 6.19:1 | 6.57:1 |
+| `t3` 元信息 | 0.52 | 3.64:1 | 3.78:1 |
+
+## 内置音源
+
+启动时会自动安装一份内置音源（脚本内名称为「独家音源」，版本 7），并按以下规则决定激活哪一份：
+
+1. **从未选择过任何音源** → 默认选中内置源；
+2. **用户自己选过**（包括导入的自有音源）→ 记住上次的选择，不覆盖。
+
+版本变化时会先删旧再装新。必须先删：`addUserApi` 只会 push，同 id 覆盖需要直接写存储层，不删会在列表里留下一条同名的僵尸条目。
+
+## 这一版还修了什么
+
+| 问题 | 根因与修复 |
+| --- | --- |
+| 播放键上出现两条横线 | `GradientView` 用纯 JS 分段拼渐变，Android 把每段的 `top` 和 `height` 两个百分比各自独立取整成像素，最坏情况误差叠加近 2px，接缝处露出容器底色。相邻段重叠由 1.06 倍改为 1.5 倍，并给容器加同色兜底 |
+| 歌单详情点返回无效，点两下直接回发现页 | 返回原依赖 `commonState.componentIds.songlistDetail`，那是异步写入的全局注册表，同一名字只保留最后一个；值丢失或指向已出栈组件时 `pop()` 静默失败。改用屏幕自己的 `componentId` |
+| 歌单详情里点悬浮播放条进不了音乐页 | 该页是盖在 `Home` 之上的独立原生 Screen，只切 Tab 只会改变被完全遮住的底层。改为先 `pop()` 自己再切 Tab（顺序不能反，否则底层会先变成音乐页再被揭开） |
+| 进度条上方进度线颜色不跟随主题 | 静态渐变数组在模块加载时固化，改用 `useTideGradient()` |
+
+历史版本中还修复过：音频无输出（PCM 缓冲区只消费输入区间、输出后 `flip()`）、进度条不走（vendor 内重复的 React 运行时）、剩余时间恒为 `-0:00`（秒数上多余的 `/1000`）、拖动进度条后回弹（进度轮询带版本号丢弃旧响应）、音量滑块不跟手（固定 44dp 触摸区 + 拖动期间不被受控旧值覆盖）。
+
+## 目录结构
+
+```
+android/                Android 原生工程（含自定义液态玻璃模糊视图）
+src/
+  components/liquid/    TIDE 设计系统：令牌、玻璃表面、渐变、频谱进度条
+  screens/Home/Tabs/    发现 / 音乐 / 我的 三个主页面
+  screens/Home/Views/   设置、搜索、歌单广场、排行榜
+  theme/                主题定义与液态玻璃家族判定
+  core/init/            启动初始化（含内置音源安装）
+  assets/               内置音源脚本（分段 JSON 字符串，与源文件逐字节一致）
+vendor/                 本地化的原生依赖，已移除嵌套 .git
+metro.config.js         强制单份 React / React Native 解析
+```
+
+## 构建
+
+```bash
+npm install
+
+# 手机（arm64）
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+
+# 模拟器（x86_64）
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64
+```
+
+release 构建若在 Metro 文件监听阶段超时，可在构建进程设置 `CI=true` 关闭 watch。
+
+签名需要自备 `android/keystore.properties` 与 keystore 文件，二者均未纳入版本库。
+
+## 验证状态
+
+本分支的验证分三层，请按这个边界理解它的成熟度：
+
+- **已通过**：`eslint` 对全部改动文件零报错；`tsc --noEmit` 无新增错误；Metro 全量打包（`--dev true`）成功产出 bundle 与 15 个 asset。
+- **既有问题，与本分支无关**：`tsc` 仍有 5 处上游遗留类型错误（`timeoutExit` / `plugins/player/hook` 的 `Timer` 类型、`SourceSelector` 的泛型参数、`store/player/action` 的 `listId` 可空性），另有 `vendor` 内示例工程自身的报错。
+- **未验证**：**没有完成真机或模拟器实测**。当前环境无可用 AVD，也未安装 `emulator.exe`，`adb devices` 只有一个 offline 设备。因此深色 / 浅色两套主题的实际视觉表现、以及上文列出的各项交互修复，都只有代码级与编译级依据，没有截图或录屏证据。
+
+## 许可与免责
+
+沿用上游 Apache-2.0，见 [`LICENSE`](./LICENSE)。以下协议为对 Apache License 2.0 的补充，如有冲突以以下协议为准。
 
 ---
 

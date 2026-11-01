@@ -13,7 +13,8 @@ import Text from '@/components/common/Text'
 import { type Position } from './ListMenu'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import Loading from '@/components/common/Loading'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 type FlatListType = FlatListProps<LX.List.MyListInfo>
 
@@ -46,7 +47,7 @@ const ListItem = memo(({ item, index, activeId, onPress, onShowMenu }: {
   }
 
   return (
-    <View style={[styles.listItem, { height: ITEM_HEIGHT }, theme.id === 'liquid_glass' && styles.tideItem, theme.id === 'liquid_glass' && active && styles.tideActive]}>
+    <View style={[styles.listItem, { height: ITEM_HEIGHT }, isLiquidGlass(theme) && styles.tideItem, isLiquidGlass(theme) && active && styles.tideActive]}>
       {
         active
           ? <Icon style={styles.listActiveIcon} name="chevron-right" size={12} color={theme['c-primary-font']} />
@@ -54,7 +55,7 @@ const ListItem = memo(({ item, index, activeId, onPress, onShowMenu }: {
       }
       { fetching ? <Loading color={active ? theme['c-primary-font'] : theme['c-font']} style={styles.loading} /> : null }
       <TouchableOpacity style={styles.listName} onPress={handlePress}>
-        <Text numberOfLines={1} color={theme.id === 'liquid_glass' ? (active ? TIDE_COLOR.a2 : TIDE_COLOR.t1) : active ? theme['c-primary-font'] : theme['c-font']}>{item.name}</Text>
+        <Text numberOfLines={1} color={isLiquidGlass(theme) ? (active ? TIDE_COLOR.a2 : TIDE_COLOR.t1) : active ? theme['c-primary-font'] : theme['c-font']}>{item.name}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleShowMenu} ref={moreButtonRef} style={styles.listMoreBtn}>
         <Icon name="dots-vertical" color={theme['c-350']} size={12} />
@@ -136,7 +137,7 @@ export default ({ onShowMenu }: {
 }
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideItem: {
     marginHorizontal: TIDE_SPACE.row,
     paddingHorizontal: TIDE_SPACE.row,
@@ -198,5 +199,5 @@ const styles = createStyle({
     alignItems: 'center',
     // backgroundColor: 'rgba(0,0,0,0.1)',
   },
-})
+})))
 

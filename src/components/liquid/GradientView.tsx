@@ -74,11 +74,20 @@ export default memo(({
   // 放大看就是一条条「百叶窗」。百分比定位没有取整累积，天然对齐。
   const isVertical = direction === 'vertical'
   const step = 100 / steps
-  // 每段多铺 6%，用极小重叠吃掉仍有的一像素缝隙（颜色差异 6% 看不出来）
-  const span = step * 1.06
+  // 相邻段重叠半个色阶（1.5 倍长度），把取整误差彻底盖掉。
+  //
+  // 这里必须用「整段重叠」而不是「微重叠」：曾用 1.06 倍（0.25px 重叠），
+  // 播放主键上出现两条横贯整个圆的深色细线 —— 因为 Android 把 top 和 height
+  // 两个百分比各自独立换算成整数像素，最坏情况下一个向上取整、一个向下取整，
+  // 误差叠加接近 2px，0.25px 的重叠完全不够，于是每段下沿都露出容器底色。
+  //
+  // 重叠不会让渐变分界点偏移：后渲染的段覆盖先渲染的段，段 i+1 的起点
+  // 恰好是 (i+1)*step，所以可见分界点仍然落在正确位置，只是被覆盖掉的那部分
+  // 本来就是段 i+1 应该显示的颜色。
+  const span = step * 1.5
 
   return (
-    <View style={[styles.container, { borderRadius: radius }, style]}>
+    <View style={[styles.container, { borderRadius: radius, backgroundColor: bands[0] }, style]}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         {bands.map((color, index) => (
           <View

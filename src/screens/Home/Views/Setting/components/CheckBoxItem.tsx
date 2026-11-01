@@ -6,10 +6,11 @@ import CheckBox, { type CheckBoxProps } from '@/components/common/CheckBox'
 import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import { TIDE_SPACE } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 
 export default memo((props: CheckBoxProps) => {
-  const isLiquid = useTheme().id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(useTheme())
 
   return (
     <View style={isLiquid ? styles.tideContainer : styles.container}>

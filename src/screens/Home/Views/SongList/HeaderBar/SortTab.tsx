@@ -6,7 +6,8 @@ import { useTheme } from '@/store/theme/hook'
 import Text from '@/components/common/Text'
 import { createStyle } from '@/utils/tools'
 import { BorderWidths } from '@/theme'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export interface SortTabProps {
   onSortChange: (id: string) => void
@@ -45,8 +46,8 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
     <ScrollView ref={scrollViewRef} style={styles.container} keyboardShouldPersistTaps={'always'} horizontal>
       {
         sorts.map(s => (
-          <TouchableOpacity style={[styles.button, theme.id === 'liquid_glass' && styles.tideButton, theme.id === 'liquid_glass' && activeId == s.id && styles.tideSelected]} onPress={() => { handleSortChange(s.id) }} key={s.id}>
-            <Text style={{ ...styles.buttonText, borderBottomWidth: theme.id === 'liquid_glass' ? 0 : BorderWidths.normal3, borderBottomColor: activeId == s.id ? theme['c-primary-background-active'] : 'transparent' }} color={theme.id === 'liquid_glass' ? (activeId == s.id ? TIDE_COLOR.a2 : TIDE_COLOR.t2) : activeId == s.id ? theme['c-primary-font-active'] : theme['c-font']}>{s.label}</Text>
+          <TouchableOpacity style={[styles.button, isLiquidGlass(theme) && styles.tideButton, isLiquidGlass(theme) && activeId == s.id && styles.tideSelected]} onPress={() => { handleSortChange(s.id) }} key={s.id}>
+            <Text style={{ ...styles.buttonText, borderBottomWidth: isLiquidGlass(theme) ? 0 : BorderWidths.normal3, borderBottomColor: activeId == s.id ? theme['c-primary-background-active'] : 'transparent' }} color={isLiquidGlass(theme) ? (activeId == s.id ? TIDE_COLOR.a2 : TIDE_COLOR.t2) : activeId == s.id ? theme['c-primary-font-active'] : theme['c-font']}>{s.label}</Text>
           </TouchableOpacity>
         ))
       }
@@ -55,7 +56,7 @@ export default forwardRef<SortTabType, SortTabProps>(({ onSortChange }, ref) => 
 })
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideButton: {
     borderRadius: TIDE_RADIUS.pill,
     marginVertical: 4,
@@ -91,4 +92,4 @@ const styles = createStyle({
     paddingVertical: 3,
     borderBottomWidth: BorderWidths.normal3,
   },
-})
+})))

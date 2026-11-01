@@ -11,8 +11,9 @@ import Text from '@/components/common/Text'
 import { LIST_IDS } from '@/config/constant'
 import Loading from '@/components/common/Loading'
 import { useSettingValue } from '@/store/setting/hook'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
 import { useTheme } from '@/store/theme/hook'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export interface ActiveListProps {
   onShowSearchBar: () => void
@@ -63,23 +64,23 @@ export default forwardRef<ActiveListType, ActiveListProps>(({ onShowSearchBar, o
     // 压在 TIDE 的近黑页面上像一块从别的 App 抠来的控件。
     // 改成：中性玻璃行 + T3 元信息字 + 右侧圆形玻璃搜索键，
     // 与发现页的英雄卡、我的页的列表行同属一套材质。
-    <View style={[styles.currentList, { opacity: visibleBar ? 1 : 0 }, theme.id === 'liquid_glass' && styles.tideHeader]}>
+    <View style={[styles.currentList, { opacity: visibleBar ? 1 : 0 }, isLiquidGlass(theme) && styles.tideHeader]}>
       <TouchableOpacity style={styles.currentListMain} onPress={showList} onLongPress={onScrollToTop} activeOpacity={0.7}>
-        <Icon style={styles.currentListIcon} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t3 : theme['c-font-label']} name="chevron-right" size={11} />
-        {fetching ? <Loading color={theme.id === 'liquid_glass' ? TIDE_COLOR.t3 : theme['c-font-label']} style={styles.loading} /> : null}
-        <Text size={TIDE_TYPE.body.size} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t2 : theme['c-primary-font']} numberOfLines={1} style={styles.currentListText}>
+        <Icon style={styles.currentListIcon} color={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-font-label']} name="chevron-right" size={11} />
+        {fetching ? <Loading color={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-font-label']} style={styles.loading} /> : null}
+        <Text size={TIDE_TYPE.body.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t2 : theme['c-primary-font']} numberOfLines={1} style={styles.currentListText}>
           {currentListName}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.currentListBtn} onPress={onShowSearchBar} hitSlop={6}>
-        <Icon color={theme.id === 'liquid_glass' ? TIDE_COLOR.t2 : theme['c-primary-font']} name="search-2" size={15} />
+        <Icon color={isLiquidGlass(theme) ? TIDE_COLOR.t2 : theme['c-primary-font']} name="search-2" size={15} />
       </TouchableOpacity>
     </View>
   )
 })
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideHeader: {
     marginHorizontal: TIDE_SPACE.row,
     borderRadius: TIDE_RADIUS.md,
@@ -128,4 +129,4 @@ const styles = createStyle({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
-})
+})))

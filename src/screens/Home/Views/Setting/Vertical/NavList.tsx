@@ -7,7 +7,8 @@ import Text from '@/components/common/Text'
 import { SETTING_SCREENS, type SettingScreenIds } from '../Main'
 import { useI18n } from '@/lang'
 import { BorderRadius, BorderWidths } from '@/theme'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 
 const ListItem = memo(({ id, activeId, onPress }: {
@@ -19,7 +20,7 @@ const ListItem = memo(({ id, activeId, onPress }: {
   const t = useI18n()
 
   const active = activeId == id
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
 
   const handlePress = () => {
     onPress(id)
@@ -51,7 +52,7 @@ export default ({ onChangeId, activeId: currentId }: {
 }) => {
   const [activeId, setActiveId] = useState(global.lx.settingActiveId)
   const theme = useTheme()
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
 
   const handleChangeId = useCallback((id: SettingScreenIds) => {
     onChangeId(id)
@@ -69,7 +70,7 @@ export default ({ onChangeId, activeId: currentId }: {
 }
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideContainer: {
     height: 52,
     borderBottomWidth: 0,
@@ -136,4 +137,4 @@ const styles = createStyle({
     // paddingLeft: 5,
     // backgroundColor: 'rgba(0,0,0,0.1)',
   },
-})
+})))

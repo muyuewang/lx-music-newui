@@ -13,7 +13,8 @@ import { useTheme } from '@/store/theme/hook'
 // import { BorderWidths } from '@/theme'
 import ActiveListName, { type ActiveListNameType } from './ActiveListName'
 import { BorderWidths } from '@/theme'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export interface HeaderBarProps {
   onShowBound: () => void
@@ -39,14 +40,14 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onShowBound, onSourc
 
 
   return (
-    <View style={[styles.currentList, { borderBottomColor: theme['c-border-background'] }, theme.id === 'liquid_glass' && styles.tideHeader]}>
+    <View style={[styles.currentList, { borderBottomColor: theme['c-border-background'] }, isLiquidGlass(theme) && styles.tideHeader]}>
       <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} />
       <ActiveListName ref={activeListNameRef} onShowBound={onShowBound} />
     </View>
   )
 })
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideHeader: {
     height: 44,
     marginHorizontal: TIDE_SPACE.row,
@@ -68,4 +69,4 @@ const styles = createStyle({
   selector: {
     width: 86,
   },
-})
+})))

@@ -5,7 +5,8 @@ import Button, { type BtnType } from '@/components/common/Button'
 import { createStyle } from '@/utils/tools'
 import { type BoardItem } from '@/store/leaderboard/state'
 import { Icon } from '@/components/common/Icon'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 // index={index}
 // longPressIndex={longPressIndex}
@@ -39,21 +40,21 @@ export default ({ item, activeId, index, longPressIndex, onBoundChange, onShowMe
   return (
     <Button
       ref={buttonRef}
-      style={[styles.button, { backgroundColor: index == longPressIndex ? theme['c-button-background-active'] : undefined }, theme.id === 'liquid_glass' && styles.tideButton, theme.id === 'liquid_glass' && (active || index == longPressIndex) && styles.tideActive]}
+      style={[styles.button, { backgroundColor: index == longPressIndex ? theme['c-button-background-active'] : undefined }, isLiquidGlass(theme) && styles.tideButton, isLiquidGlass(theme) && (active || index == longPressIndex) && styles.tideActive]}
       key={item.id} onLongPress={setPosition}
       onPress={() => { onBoundChange(item) }}
     >
       {
         active
-          ? <Icon style={styles.listActiveIcon} name="chevron-right" size={12} color={theme.id === 'liquid_glass' ? TIDE_COLOR.a2 : theme['c-primary-font']} />
+          ? <Icon style={styles.listActiveIcon} name="chevron-right" size={12} color={isLiquidGlass(theme) ? TIDE_COLOR.a2 : theme['c-primary-font']} />
           : null
       }
-      <Text style={styles.listName} size={14} textBreakStrategy="simple" color={theme.id === 'liquid_glass' ? (active ? TIDE_COLOR.a2 : TIDE_COLOR.t2) : active ? theme['c-primary-font-active'] : theme['c-font']} numberOfLines={1}>{item.name}</Text>
+      <Text style={styles.listName} size={14} textBreakStrategy="simple" color={isLiquidGlass(theme) ? (active ? TIDE_COLOR.a2 : TIDE_COLOR.t2) : active ? theme['c-primary-font-active'] : theme['c-font']} numberOfLines={1}>{item.name}</Text>
     </Button>
   )
 }
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideButton: {
     marginHorizontal: TIDE_SPACE.row,
     marginVertical: 4,
@@ -87,4 +88,4 @@ const styles = createStyle({
     paddingLeft: 6,
     // backgroundColor: 'rgba(0,0,0,0.1)',
   },
-})
+})))

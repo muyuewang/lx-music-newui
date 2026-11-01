@@ -8,7 +8,8 @@ import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import Text from './Text'
 import { scaleSizeH, scaleSizeW } from '@/utils/pixelRatio'
-import { TIDE_COLOR, TIDE_RADIUS } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 const menuItemHeight = scaleSizeH(40)
 const menuItemWidth = scaleSizeW(100)
@@ -17,7 +18,7 @@ export interface Position { w: number, h: number, x: number, y: number, menuWidt
 export interface MenuSize { width?: number, height?: number }
 export type Menus = Readonly<Array<{ action: string, label: string, disabled?: boolean }>>
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   mask: {
     position: 'absolute',
     top: 0,
@@ -55,7 +56,7 @@ const styles = createStyle({
   //   // textAlign: 'center',
   //   fontSize: 14,
   // },
-})
+})))
 
 interface Props<M extends Menus = Menus> {
   menus: Readonly<M>
@@ -83,7 +84,7 @@ const Menu = ({
   center = false,
 }: Props) => {
   const theme = useTheme()
-  const isTide = theme.id === 'liquid_glass'
+  const isTide = isLiquidGlass(theme)
   const windowSize = useWindowSize()
   // const fadeAnim = useRef(new Animated.Value(0)).current
   // console.log(buttonPosition)

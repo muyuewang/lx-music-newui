@@ -13,6 +13,7 @@ import { type Source as MusicSource } from '@/store/search/music/state'
 import { type Source as SonglistSource } from '@/store/search/songlist/state'
 import { useTheme } from '@/store/theme/hook'
 import { TIDE_SPACE } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 type Sources = Readonly<Array<MusicSource | SonglistSource>>
 type SourceSelectorProps = _SourceSelectorProps<Sources>
@@ -52,7 +53,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSourceChange, onTi
 
 
   return (
-    <View style={[styles.searchBar, theme.id === 'liquid_glass' && { height: 52, paddingRight: TIDE_SPACE.screen, paddingLeft: TIDE_SPACE.row }]}>
+    <View style={[styles.searchBar, isLiquidGlass(theme) && { height: 52, paddingRight: TIDE_SPACE.screen, paddingLeft: TIDE_SPACE.row }]}>
       <View style={styles.selector}>
         <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} center />
       </View>

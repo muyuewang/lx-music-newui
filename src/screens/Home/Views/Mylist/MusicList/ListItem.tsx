@@ -9,7 +9,8 @@ import { useAssertApiSupport } from '@/store/common/hook'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import Text from '@/components/common/Text'
 import Badge from '@/components/common/Badge'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
 
@@ -45,7 +46,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
   const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` · ${item.meta.albumName}` : ''}`
 
   return (
-    <View style={[styles.listItem, { width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)', opacity: isSupported ? 1 : 0.5 }, theme.id === 'liquid_glass' && styles.tideItem, theme.id === 'liquid_glass' && active && styles.tideActive, theme.id === 'liquid_glass' && isSelected && styles.tideSelected]}>
+    <View style={[styles.listItem, { width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)', opacity: isSupported ? 1 : 0.5 }, isLiquidGlass(theme) && styles.tideItem, isLiquidGlass(theme) && active && styles.tideActive, isLiquidGlass(theme) && isSelected && styles.tideSelected]}>
       <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
         {
           active
@@ -88,7 +89,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
 })
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideItem: {
     borderRadius: TIDE_RADIUS.md,
     borderWidth: 1,
@@ -173,4 +174,4 @@ const styles = createStyle({
     // backgroundColor: 'rgba(0,0,0,0.2)',
     justifyContent: 'center',
   },
-})
+})))

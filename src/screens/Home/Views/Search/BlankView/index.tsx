@@ -10,7 +10,8 @@ import { ScrollView, TouchableOpacity, View } from 'react-native'
 import HistorySearch, { type HistorySearchType } from './HistorySearch'
 import HotSearch, { type HotSearchType } from './HotSearch'
 import { Icon } from '@/components/common/Icon'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 interface BlankViewProps {
   onSearch: (keyword: string) => void
@@ -43,16 +44,16 @@ const NoSourceTip = () => {
   if (!hasNoSource) return null
 
   return (
-    <View style={[styles.tipCard, styles.tipRow, { backgroundColor: theme['c-button-background'] }, theme.id === 'liquid_glass' && styles.tideTip]}>
+    <View style={[styles.tipCard, styles.tipRow, { backgroundColor: theme['c-button-background'] }, isLiquidGlass(theme) && styles.tideTip]}>
       <View style={styles.tipIcon}>
-        <Icon name="add-music" size={16} color={theme.id === 'liquid_glass' ? TIDE_COLOR.a2 : theme['c-primary-font']} />
+        <Icon name="add-music" size={16} color={isLiquidGlass(theme) ? TIDE_COLOR.a2 : theme['c-primary-font']} />
       </View>
       <View style={styles.tipTextContent}>
-        <Text size={TIDE_TYPE.body.size} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t1 : theme['c-font']}>{t('search_no_source_title')}</Text>
-        <Text style={styles.tipDesc} size={TIDE_TYPE.foot.size} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t3 : theme['c-font-label']}>{t('search_no_source_desc')}</Text>
+        <Text size={TIDE_TYPE.body.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t1 : theme['c-font']}>{t('search_no_source_title')}</Text>
+        <Text style={styles.tipDesc} size={TIDE_TYPE.foot.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-font-label']}>{t('search_no_source_desc')}</Text>
       </View>
       <TouchableOpacity style={styles.tipBtn} onPress={openSetting}>
-        <Text size={TIDE_TYPE.foot.size} color={theme.id === 'liquid_glass' ? TIDE_COLOR.a2 : theme['c-primary-font']}>{t('search_no_source_btn')}</Text>
+        <Text size={TIDE_TYPE.foot.size} color={isLiquidGlass(theme) ? TIDE_COLOR.a2 : theme['c-primary-font']}>{t('search_no_source_btn')}</Text>
       </TouchableOpacity>
     </View>
   )
@@ -90,7 +91,7 @@ export default forwardRef<BlankViewType, BlankViewProps>(({ onSearch }, ref) => 
       ? isShowHotSearch || isShowHistorySearch
         ? (
             <ScrollView>
-              <View style={[styles.content, theme.id === 'liquid_glass' && { paddingHorizontal: TIDE_SPACE.screen, paddingBottom: TIDE_SPACE.section }]}>
+              <View style={[styles.content, isLiquidGlass(theme) && { paddingHorizontal: TIDE_SPACE.screen, paddingBottom: TIDE_SPACE.section }]}>
                 <NoSourceTip />
                 { isShowHotSearch ? <HotSearch ref={hotSearchRef} onSearch={onSearch} /> : null }
                 { isShowHistorySearch ? <HistorySearch ref={historySearchRef} onSearch={onSearch} /> : null }
@@ -111,7 +112,7 @@ export default forwardRef<BlankViewType, BlankViewProps>(({ onSearch }, ref) => 
 })
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideTip: {
     borderRadius: TIDE_RADIUS.md,
     borderWidth: 1,
@@ -178,4 +179,4 @@ const styles = createStyle({
     borderWidth: 1,
     borderColor: 'rgba(121, 230, 255, 0.35)',
   },
-})
+})))

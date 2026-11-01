@@ -8,7 +8,8 @@ import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
 import { createStyle } from '@/utils/tools'
 import { BorderWidths } from '@/theme'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 interface SearchInputProps {
   onSearch: (keywork: string) => void
@@ -120,7 +121,7 @@ export default forwardRef<ListSearchBarType, ListSearchBarProps>(({ onSearch, on
     ...styles.container,
     // backgroundColor: theme['c-content-background'],
     borderBottomColor: theme['c-border-background'],
-    ...(theme.id === 'liquid_glass' ? styles.tideBar : {}),
+    ...(isLiquidGlass(theme) ? styles.tideBar : {}),
     opacity: animFade, // Bind opacity to animated value
     transform: [
       { translateY: animTranslateY },
@@ -143,7 +144,7 @@ export default forwardRef<ListSearchBarType, ListSearchBarProps>(({ onSearch, on
   return !visible && animatePlayed ? null : component
 })
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideBar: {
     borderRadius: TIDE_RADIUS.pill,
     borderWidth: 1,
@@ -177,4 +178,4 @@ const styles = createStyle({
     alignItems: 'center',
     justifyContent: 'center',
   },
-})
+})))

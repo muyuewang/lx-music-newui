@@ -15,13 +15,14 @@ import { createStyle } from '@/utils/tools'
 import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
 import { SETTING_SCREENS, type SettingScreenIds } from '../Main'
 import { useTheme } from '@/store/theme/hook'
-import { TIDE_COLOR, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
 import NavList from './NavList'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 type FlatListType = FlatListProps<SettingScreenIds>
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideContainer: {
     flex: 1,
     backgroundColor: TIDE_COLOR.bg,
@@ -41,7 +42,7 @@ const styles = createStyle({
     paddingBottom: DOCK_CONTENT_BOTTOM,
     flex: 0,
   },
-})
+})))
 
 const ListItem = memo(({
   id,
@@ -70,7 +71,7 @@ export default () => {
   const renderItem: FlatListType['renderItem'] = ({ item }) => <ListItem id={item} />
   const getkey: FlatListType['keyExtractor'] = item => item
 
-  if (theme.id === 'liquid_glass') {
+  if (isLiquidGlass(theme)) {
     return (
       <View style={styles.tideContainer}>
         <NavList activeId={activeId} onChangeId={handleChangeId} />

@@ -5,6 +5,7 @@ import Slider, { type SliderProps } from '@react-native-community/slider'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
 import { TIDE_COLOR } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export type {
   SliderProps,
@@ -12,7 +13,7 @@ export type {
 
 export default memo(({ value, minimumValue, maximumValue, onSlidingStart, onSlidingComplete, onValueChange, step }: SliderProps) => {
   const theme = useTheme()
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
 
   return (
     <Slider

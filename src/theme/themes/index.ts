@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { getUserTheme, saveUserTheme } from '@/utils/data'
-import themes from '@/theme/themes/themes'
+import builtinThemes from '@/theme/themes/themes'
+import { lightLiquidGlassTheme } from '@/theme/themes/lightLiquidGlass'
 import settingState from '@/store/setting/state'
 import themeState from '@/store/theme/state'
 import { isUrl } from '@/utils'
@@ -15,8 +16,28 @@ export const BG_IMAGES = {
   'xnkl.png': require('./images/xnkl.png') as ImageSourcePropType,
   // 液态玻璃主题背景：深色渐变光斑，用于给毛玻璃提供可模糊的层次
   'liquid_glass.jpg': require('./images/liquid_glass.jpg') as ImageSourcePropType,
+  // 浅色版：冷白底 + 柔和色斑，毛玻璃吸色后仍是浅色，文字不会失去对比
+  'liquid_glass_light.jpg': require('./images/liquid_glass_light.jpg') as ImageSourcePropType,
 } as const
 
+/**
+ * 内置主题列表。
+ *
+ * 现在只保留液态玻璃两套（深色 / 浅色）。原先的 17 套纯配色主题
+ * 在这套 TIDE 液态玻璃界面上是无效的：TIDE 页面用的是一整套独立的
+ * 玻璃令牌（近黑底 + 白字 + 品牌渐变），那些主题的配色根本作用不到，
+ * 选中后画面几乎不变，等于给用户 17 个点了没反应的按钮。
+ */
+export type LocalTheme = typeof builtinThemes[number]
+
+const themes: LocalTheme[] = [
+  builtinThemes.find(t => t.id === 'liquid_glass')!,
+  // 浅色版由 lightLiquidGlass.ts 按同一主色派生，结构上等价于内置主题；
+  // 它带 as const 的只读修饰，这里断言成可写版本以便与其他主题同构使用
+  lightLiquidGlassTheme as unknown as LocalTheme,
+]
+
+export { themes }
 
 let userThemes: LX.Theme[]
 export const getAllThemes = async() => {
@@ -43,7 +64,6 @@ export const removeTheme = async(id: string) => {
   await saveUserTheme(userThemes)
 }
 
-export type LocalTheme = typeof themes[number]
 type ColorsKey = keyof LX.Theme['config']['themeColors']
 type ExtInfoKey = keyof LX.Theme['config']['extInfo']
 const varColorRxp = /^var\((.+)\)$/

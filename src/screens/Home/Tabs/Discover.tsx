@@ -10,10 +10,10 @@ import GlassIconButton from '@/components/liquid/GlassIconButton'
 import GradientView from '@/components/liquid/GradientView'
 import {
   TIDE_COLOR,
-  TIDE_GRADIENT,
   TIDE_RADIUS,
   TIDE_SPACE,
   TIDE_TYPE,
+  useTideGradient,
 } from '@/components/liquid/tide'
 import { useStatusbarHeight } from '@/store/common/hook'
 import { useMyList } from '@/store/list/hook'
@@ -37,18 +37,21 @@ type SubView = 'home' | 'search' | 'songlist' | 'top'
  * 全屏只出现一次（Hero 的播放键）——SPEC §3.2 规定品牌渐变一屏最多三处，
  * 首页把额度留给「播放」这一个动作。
  */
-const GradientPlayButton = memo(({ size = 46, onPress }: { size?: number, onPress: () => void }) => (
-  <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [{ opacity: pressed ? 0.86 : 1 }]}>
-    <GradientView
-      colors={TIDE_GRADIENT}
-      direction="vertical"
-      radius={size / 2}
-      style={[styles.gradientButton, { width: size, height: size, borderRadius: size / 2 }]}
-    >
-      <Icon name="play" size={Math.round(size * 0.38)} color="#0B0D16" />
-    </GradientView>
-  </Pressable>
-))
+const GradientPlayButton = memo(({ size = 46, onPress }: { size?: number, onPress: () => void }) => {
+  const gradient = useTideGradient()
+  return (
+    <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [{ opacity: pressed ? 0.86 : 1 }]}>
+      <GradientView
+        colors={gradient}
+        direction="vertical"
+        radius={size / 2}
+        style={[styles.gradientButton, { width: size, height: size, borderRadius: size / 2 }]}
+      >
+        <Icon name="play" size={Math.round(size * 0.38)} color={TIDE_COLOR.onAccent} />
+      </GradientView>
+    </Pressable>
+  )
+})
 
 /** 四宫格入口：中性底色图标与下方文字。 */
 const Entry = memo(({ icon, label, onPress }: {
@@ -363,7 +366,7 @@ const HomeView = memo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
         {recent.length
           ? recent.map(item => (
               <RecentRow key={item.id} item={item} onPress={() => { handlePlayRecent(item.id) }} />
-            ))
+          ))
           : (
               <Text size={TIDE_TYPE.body.size} color={TIDE_COLOR.t3} style={styles.emptyHint}>
                 {t('discover_recent_empty')}

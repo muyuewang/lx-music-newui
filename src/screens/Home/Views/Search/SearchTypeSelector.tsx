@@ -8,7 +8,8 @@ import Text from '@/components/common/Text'
 import { useTheme } from '@/store/theme/hook'
 import { getSearchSetting } from '@/utils/data'
 import { BorderWidths } from '@/theme'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 const SEARCH_TYPE_LIST = [
   'music',
@@ -39,8 +40,8 @@ export default () => {
     <ScrollView style={styles.container} keyboardShouldPersistTaps={'always'} horizontal={true}>
       {
         list.map(t => (
-          <TouchableOpacity style={[styles.button, theme.id === 'liquid_glass' && styles.tideButton, theme.id === 'liquid_glass' && type == t.id && styles.tideSelected]} onPress={() => { handleTypeChange(t.id) }} key={t.id}>
-            <Text style={{ ...styles.buttonText, borderBottomWidth: theme.id === 'liquid_glass' ? 0 : BorderWidths.normal3, borderBottomColor: type == t.id ? theme['c-primary-background-active'] : 'transparent' }} color={theme.id === 'liquid_glass' ? (type == t.id ? TIDE_COLOR.a2 : TIDE_COLOR.t2) : type == t.id ? theme['c-primary-font-active'] : theme['c-font']}>{t.label}</Text>
+          <TouchableOpacity style={[styles.button, isLiquidGlass(theme) && styles.tideButton, isLiquidGlass(theme) && type == t.id && styles.tideSelected]} onPress={() => { handleTypeChange(t.id) }} key={t.id}>
+            <Text style={{ ...styles.buttonText, borderBottomWidth: isLiquidGlass(theme) ? 0 : BorderWidths.normal3, borderBottomColor: type == t.id ? theme['c-primary-background-active'] : 'transparent' }} color={isLiquidGlass(theme) ? (type == t.id ? TIDE_COLOR.a2 : TIDE_COLOR.t2) : type == t.id ? theme['c-primary-font-active'] : theme['c-font']}>{t.label}</Text>
           </TouchableOpacity>
         ))
       }
@@ -48,7 +49,7 @@ export default () => {
   )
 }
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideButton: {
     borderRadius: TIDE_RADIUS.pill,
     marginVertical: 4,
@@ -90,4 +91,4 @@ const styles = createStyle({
     borderBottomWidth: BorderWidths.normal3,
     // width: 80,
   },
-})
+})))

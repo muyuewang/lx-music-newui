@@ -5,6 +5,7 @@ import Text from '@/components/common/Text'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
 import { TIDE_COLOR, TIDE_RADIUS } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export interface ButtonProps extends BtnProps {
   size?: number
@@ -12,7 +13,7 @@ export interface ButtonProps extends BtnProps {
 
 export default memo(({ disabled, size = 14, onPress, children }: ButtonProps) => {
   const theme = useTheme()
-  const isTide = theme.id === 'liquid_glass'
+  const isTide = isLiquidGlass(theme)
 
   return (
     <Button style={{ ...styles.button, backgroundColor: isTide ? TIDE_COLOR.a1 : theme['c-button-background'], ...(isTide ? styles.tideButton : {}) }} onPress={onPress} disabled={disabled}>

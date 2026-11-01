@@ -4,9 +4,10 @@ import { Icon } from '@/components/common/Icon'
 import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import { setSpText } from '@/utils/pixelRatio'
-import { TIDE_COLOR, TIDE_RADIUS } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   content: {
     flexDirection: 'row',
     // backgroundColor: 'rgba(0,0,0,0.1)',
@@ -50,7 +51,7 @@ const styles = createStyle({
     justifyContent: 'center',
     // backgroundColor: 'rgba(0,0,0,0.2)',
   },
-})
+})))
 
 export interface InputProps extends TextInputProps {
   onChangeText?: (value: string) => void
@@ -70,7 +71,7 @@ export interface InputType {
 export default forwardRef<InputType, InputProps>(({ onChangeText, onClearText, clearBtn, style, size = 14, ...props }, ref) => {
   const inputRef = useRef<TextInput>(null)
   const theme = useTheme()
-  const isTide = theme.id === 'liquid_glass'
+  const isTide = isLiquidGlass(theme)
   // const scaleClearBtn = useRef(new Animated.Value(0)).current
 
   useImperativeHandle(ref, () => ({

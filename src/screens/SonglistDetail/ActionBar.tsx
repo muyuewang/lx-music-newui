@@ -1,11 +1,10 @@
-import { memo } from 'react'
+import { memo, useCallback } from 'react'
 import { View } from 'react-native'
 import Button from '@/components/common/Button'
 
 import { createStyle } from '@/utils/tools'
 import { pop } from '@/navigation'
 import { useTheme } from '@/store/theme/hook'
-import commonState from '@/store/common/state'
 import Text from '@/components/common/Text'
 import { handleCollect, handlePlay } from './listAction'
 import songlistState from '@/store/songlist/state'
@@ -13,14 +12,22 @@ import { useI18n } from '@/lang'
 import { useListInfo } from './state'
 // import { NAV_SHEAR_NATIVE_IDS } from '@/config/constant'
 
-export default memo(() => {
+export default memo(({ componentId }: { componentId: string }) => {
   const theme = useTheme()
   const t = useI18n()
   const info = useListInfo()
 
-  const back = () => {
-    void pop(commonState.componentIds.songlistDetail!)
-  }
+  /**
+   * 返回歌单广场。
+   *
+   * 这里用屏幕自己拿到的 componentId，而不是 commonState.componentIds.songlistDetail。
+   * 后者是全局注册表里的值：它由 useEffect 异步写入，且在栈里有多个歌单详情时
+   * 只保留最后一个 —— 一旦指向的组件已经出栈，pop 找不到目标就静默失败，
+   * 表现就是「点返回没反应」。
+   */
+  const back = useCallback(() => {
+    void pop(componentId)
+  }, [componentId])
 
   const handlePlayAll = () => {
     if (!songlistState.listDetailInfo.info.name) return

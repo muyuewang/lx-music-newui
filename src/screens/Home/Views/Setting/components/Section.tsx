@@ -3,7 +3,8 @@ import { View } from 'react-native'
 import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import Text from '@/components/common/Text'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 
 interface Props {
@@ -13,7 +14,7 @@ interface Props {
 
 export default ({ title, children }: Props) => {
   const theme = useTheme()
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
 
   return (
     <View style={[styles.container, isLiquid && styles.tideContainer]}>
@@ -30,7 +31,7 @@ export default ({ title, children }: Props) => {
 }
 
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   container: {
     // paddingLeft: 10,
     // backgroundColor: 'rgba(0,0,0,0.2)',
@@ -56,4 +57,4 @@ const styles = createStyle({
     marginBottom: 10,
     // lineHeight: 16,
   },
-})
+})))

@@ -4,8 +4,9 @@ import { StyleSheet, View } from 'react-native'
 import Input, { type InputType, type InputProps } from '@/components/common/Input'
 import { Icon } from '@/components/common/Icon'
 import { useTheme } from '@/store/theme/hook'
-import { TIDE_COLOR, TIDE_RADIUS } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, createThemedStyle } from '@/components/liquid/tide'
 import { useI18n } from '@/lang'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export interface SearchInputProps {
   onChangeText: (text: string) => void
@@ -58,14 +59,14 @@ export default forwardRef<SearchInputType, SearchInputProps>(({ onChangeText, on
   }, [onSubmit])
 
   return (
-    <View style={[styles.wrap, styles.row, { backgroundColor: theme['c-primary-input-background'] }, theme.id === 'liquid_glass' && styles.tideInput]}>
-      <Icon name="search-2" size={15} color={theme.id === 'liquid_glass' ? TIDE_COLOR.t3 : theme['c-font-label']} style={styles.icon} />
+    <View style={[styles.wrap, styles.row, { backgroundColor: theme['c-primary-input-background'] }, isLiquidGlass(theme) && styles.tideInput]}>
+      <Icon name="search-2" size={15} color={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-font-label']} style={styles.icon} />
       <Input
         ref={inputRef}
         placeholder={t('search_input_placeholder')}
         value={text}
         onChangeText={handleChangeText}
-        placeholderTextColor={theme.id === 'liquid_glass' ? TIDE_COLOR.t3 : theme['c-font-label']}
+        placeholderTextColor={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-font-label']}
         onBlur={onBlur}
         onSubmitEditing={handleSubmit}
         onClearText={handleClearText}
@@ -76,7 +77,7 @@ export default forwardRef<SearchInputType, SearchInputProps>(({ onChangeText, on
   )
 })
 
-const styles = StyleSheet.create({
+const styles = createThemedStyle(() => (StyleSheet.create({
   tideInput: {
     borderRadius: TIDE_RADIUS.pill,
     backgroundColor: TIDE_COLOR.fillMid,
@@ -98,4 +99,4 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 6,
   },
-})
+})))

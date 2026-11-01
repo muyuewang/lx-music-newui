@@ -8,9 +8,10 @@ import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import Text from './Text'
 import { useStatusbarHeight } from '@/store/common/hook'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   centeredView: {
     flex: 1,
     // justifyContent: 'flex-end',
@@ -75,7 +76,7 @@ const styles = createStyle({
     alignItems: 'center',
     // backgroundColor: '#eee',
   },
-})
+})))
 
 export interface PopupProps {
   onHide?: () => void
@@ -101,7 +102,7 @@ export default forwardRef<PopupType, PopupProps>(({
   children,
 }: PopupProps, ref) => {
   const theme = useTheme()
-  const isTide = theme.id === 'liquid_glass'
+  const isTide = isLiquidGlass(theme)
   const { keyboardShown, keyboardHeight } = useKeyboard()
   const statusBarHeight = useStatusbarHeight()
 

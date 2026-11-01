@@ -6,9 +6,10 @@ import { createStyle } from '@/utils/tools'
 import { BorderWidths } from '@/theme'
 import { useTheme } from '@/store/theme/hook'
 import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
-import { TIDE_COLOR, TIDE_SPACE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideContainer: {
     backgroundColor: TIDE_COLOR.bg,
     borderTopWidth: 0,
@@ -39,13 +40,13 @@ const styles = createStyle({
     paddingBottom: 15,
     flex: 0,
   },
-})
+})))
 
 export default () => {
   const theme = useTheme()
   const mainRef = useRef<MainType>(null)
   const scrollRef = useRef<ScrollView>(null)
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
 
   return (
     <View style={[styles.container, { borderTopColor: theme['c-border-background'] }, isLiquid && styles.tideContainer]}>

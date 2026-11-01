@@ -4,13 +4,14 @@ import Button, { type BtnProps } from '@/components/common/Button'
 import Text from '@/components/common/Text'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 type ButtonProps = BtnProps
 
 export default memo(({ disabled, onPress, children, style, ...props }: ButtonProps) => {
   const theme = useTheme()
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
 
   return (
     <Button
@@ -24,7 +25,7 @@ export default memo(({ disabled, onPress, children, style, ...props }: ButtonPro
   )
 })
 
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   tideButton: {
     minHeight: 44,
     justifyContent: 'center',
@@ -54,4 +55,4 @@ const styles = createStyle({
     borderRadius: 4,
     marginRight: 10,
   },
-})
+})))

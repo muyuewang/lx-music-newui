@@ -5,7 +5,8 @@ import type { InputType, InputProps } from '@/components/common/Input'
 import Input from '@/components/common/Input'
 import { useTheme } from '@/store/theme/hook'
 import Text from '@/components/common/Text'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 
 export interface InputItemProps extends InputProps {
@@ -20,7 +21,7 @@ export default memo(({ value, label, onChanged, style, ...props }: InputItemProp
   const isMountRef = useRef(false)
   const inputRef = useRef<InputType>(null)
   const theme = useTheme()
-  const isLiquid = theme.id === 'liquid_glass'
+  const isLiquid = isLiquidGlass(theme)
   const saveValue = () => {
     onChanged?.(text, (value: string) => {
       if (!isMountRef.current) return
@@ -78,7 +79,7 @@ export default memo(({ value, label, onChanged, style, ...props }: InputItemProp
   )
 })
 
-const styles = StyleSheet.create({
+const styles = createThemedStyle(() => (StyleSheet.create({
   tideContainer: {
     marginVertical: TIDE_SPACE.row,
   },
@@ -112,4 +113,4 @@ const styles = StyleSheet.create({
     // paddingBottom: 3,
     maxWidth: 300,
   },
-})
+})))

@@ -10,6 +10,7 @@ import Text from '@/components/common/Text'
 import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
 import { TIDE_COLOR, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 interface ListProps {
   onSearch: (keyword: string) => void
@@ -50,7 +51,7 @@ export default forwardRef<ListType, ListProps>(({ onSearch }, ref) => {
     showBlankView
       ? <BlankView ref={blankViewRef} onSearch={onSearch} />
       : <View style={{ flex: 1 }}>
-          {theme.id === 'liquid_glass' ? (
+          {isLiquidGlass(theme) ? (
             <View style={{ paddingHorizontal: TIDE_SPACE.screen, paddingTop: TIDE_SPACE.row, paddingBottom: TIDE_SPACE.row }}>
               <Text size={TIDE_TYPE.foot.size} color={TIDE_COLOR.t3}>{t(`search_type_${listType}`)}</Text>
               <Text numberOfLines={1} size={TIDE_TYPE.headline.size} style={TIDE_TYPE.headline.style} color={TIDE_COLOR.t1}>{resultText}</Text>

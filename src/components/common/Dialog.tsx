@@ -8,10 +8,11 @@ import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import Text from './Text'
 import { scaleSizeH } from '@/utils/pixelRatio'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 const HEADER_HEIGHT = 20
-const styles = createStyle({
+const styles = createThemedStyle(() => (createStyle({
   centeredView: {
     flex: 1,
     justifyContent: 'center',
@@ -79,7 +80,7 @@ const styles = createStyle({
     justifyContent: 'center',
     alignItems: 'center',
   },
-})
+})))
 
 export interface DialogProps {
   onHide?: () => void
@@ -105,7 +106,7 @@ export default forwardRef<DialogType, DialogProps>(({
   height,
 }: DialogProps, ref) => {
   const theme = useTheme()
-  const isTide = theme.id === 'liquid_glass'
+  const isTide = isLiquidGlass(theme)
   const { keyboardShown, keyboardHeight } = useKeyboard()
   const modalRef = useRef<ModalType>(null)
 

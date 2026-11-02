@@ -1,6 +1,5 @@
 import { memo, useRef } from 'react'
 import { View, TouchableOpacity } from 'react-native'
-// import Button from '@/components/common/Button'
 import Text from '@/components/common/Text'
 import Badge, { type BadgeType } from '@/components/common/Badge'
 import { Icon } from '@/components/common/Icon'
@@ -9,7 +8,10 @@ import { useTheme } from '@/store/theme/hook'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import { LIST_ITEM_HEIGHT } from '@/config/constant'
 import { createStyle, type RowInfo } from '@/utils/tools'
+import { TIDE_COLOR, TIDE_RADIUS, createThemedStyle } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
+// 与 FlatList 的 getItemLayout 保持一致，排版调整不改变测量高度。
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
 
 const useQualityTag = (musicInfo: LX.Music.MusicInfoOnline) => {
@@ -25,7 +27,6 @@ const useQualityTag = (musicInfo: LX.Music.MusicInfoOnline) => {
     info.type = 'tertiary'
     info.text = t('quality_high_quality')
   }
-
   return info
 }
 
@@ -42,130 +43,118 @@ export default memo(({ item, index, showSource, onPress, onLongPress, onShowMenu
   isShowInterval: boolean
 }) => {
   const theme = useTheme()
-
+  const liquid = isLiquidGlass(theme)
   const isSelected = selectedList.includes(item)
-
   const moreButtonRef = useRef<TouchableOpacity>(null)
   const handleShowMenu = () => {
-    if (moreButtonRef.current?.measure) {
-      moreButtonRef.current.measure((fx, fy, width, height, px, py) => {
-        // console.log(fx, fy, width, height, px, py)
-        onShowMenu(item, index, { x: Math.ceil(px), y: Math.ceil(py), w: Math.ceil(width), h: Math.ceil(height) })
-      })
-    }
+    moreButtonRef.current?.measure((fx, fy, width, height, px, py) => {
+      onShowMenu(item, index, { x: Math.ceil(px), y: Math.ceil(py), w: Math.ceil(width), h: Math.ceil(height) })
+    })
   }
   const tagInfo = useQualityTag(item)
-
   const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` · ${item.meta.albumName}` : ''}`
 
   return (
-    <View style={{ ...styles.listItem, width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)' }}>
-      <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
-        <Text style={styles.sn} size={13} color={theme['c-300']}>{index + 1}</Text>
+    <View style={[
+      styles.listItem,
+      { width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'transparent' },
+      liquid && styles.tideItem,
+      liquid && isSelected && styles.tideSelected,
+    ]}>
+      <TouchableOpacity
+        style={styles.listItemLeft}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}，${item.singer}`}
+        accessibilityState={{ selected: isSelected }}
+        onPress={() => { onPress(item, index) }}
+        onLongPress={() => { onLongPress(item, index) }}
+      >
+        <Text style={styles.sn} size={12} color={liquid ? TIDE_COLOR.t3 : theme['c-300']}>{index + 1}</Text>
         <View style={styles.itemInfo}>
-          <Text numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.title} size={14} color={liquid ? TIDE_COLOR.t1 : theme['c-font']} numberOfLines={1}>{item.name}</Text>
           <View style={styles.listItemSingle}>
-            { tagInfo.type ? <Badge type={tagInfo.type}>{tagInfo.text}</Badge> : null }
-            { showSource ? <Badge type="tertiary">{item.source}</Badge> : null }
-            <Text style={styles.listItemSingleText} size={11} color={theme['c-500']} numberOfLines={1}>{singer}</Text>
+            {tagInfo.type ? <Badge type={tagInfo.type}>{tagInfo.text}</Badge> : null}
+            {showSource ? <Badge type="tertiary">{item.source.toUpperCase()}</Badge> : null}
+            <Text style={styles.listItemSingleText} size={12} color={liquid ? TIDE_COLOR.t2 : theme['c-500']} numberOfLines={1}>{singer}</Text>
           </View>
         </View>
-        {
-          isShowInterval ? (
-            <Text size={12} color={theme['c-250']} numberOfLines={1}>{item.interval}</Text>
-          ) : null
-        }
+        {isShowInterval
+          ? <Text style={styles.duration} size={12} color={liquid ? TIDE_COLOR.t3 : theme['c-250']} numberOfLines={1}>{item.interval}</Text>
+          : null}
       </TouchableOpacity>
-     <TouchableOpacity onPress={handleShowMenu} ref={moreButtonRef} style={styles.moreButton}>
-        <Icon name="dots-vertical" style={{ color: theme['c-350'] }} size={12} />
+      <TouchableOpacity
+        onPress={handleShowMenu}
+        ref={moreButtonRef}
+        style={styles.moreButton}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}，更多操作`}
+      >
+        <Icon name="dots-vertical" color={liquid ? TIDE_COLOR.t2 : theme['c-350']} size={18} />
       </TouchableOpacity>
     </View>
   )
-}, (prevProps, nextProps) => {
-  return !!(prevProps.item === nextProps.item &&
-    prevProps.index === nextProps.index &&
-    prevProps.isShowAlbumName === nextProps.isShowAlbumName &&
-    prevProps.isShowInterval === nextProps.isShowInterval &&
-    nextProps.selectedList.includes(nextProps.item) == prevProps.selectedList.includes(nextProps.item)
-  )
-})
+}, (prev, next) => (
+  prev.item === next.item && prev.index === next.index &&
+  prev.showSource === next.showSource && prev.rowInfo.rowWidth === next.rowInfo.rowWidth &&
+  prev.onPress === next.onPress && prev.onLongPress === next.onLongPress && prev.onShowMenu === next.onShowMenu &&
+  prev.isShowAlbumName === next.isShowAlbumName && prev.isShowInterval === next.isShowInterval &&
+  next.selectedList.includes(next.item) === prev.selectedList.includes(prev.item)
+))
 
-const styles = createStyle({
+const styles = createThemedStyle(() => createStyle({
   listItem: {
-    // width: '100%',
     flexDirection: 'row',
-    flexWrap: 'nowrap',
-    // paddingLeft: 10,
-    paddingRight: 2,
     alignItems: 'center',
-    // borderBottomWidth: BorderWidths.normal,
+    paddingRight: 2,
+  },
+  tideItem: {
+    borderRadius: TIDE_RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+  tideSelected: {
+    backgroundColor: TIDE_COLOR.fillMid,
+    borderColor: TIDE_COLOR.a2,
   },
   listItemLeft: {
     flex: 1,
-    flexGrow: 1,
-    flexShrink: 1,
+    height: '100%',
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
   },
   sn: {
-    width: 38,
-    // fontSize: 12,
+    width: 34,
+    flexShrink: 0,
     textAlign: 'center',
-    // backgroundColor: 'rgba(0,0,0,0.2)',
-    paddingLeft: 3,
-    paddingRight: 3,
   },
   itemInfo: {
-    flexGrow: 1,
-    flexShrink: 1,
-    paddingRight: 2,
-    // paddingTop: 10,
-    // paddingBottom: 10,
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
   },
-  // listItemTitle: {
-  //   // backgroundColor: 'rgba(0,0,0,0.2)',
-  //   flexGrow: 0,
-  //   flexShrink: 1,
-  //   // fontSize: 15,
-  // },
+  title: { fontWeight: '500' },
   listItemSingle: {
-    paddingTop: 2,
+    paddingTop: 3,
     flexDirection: 'row',
     alignItems: 'center',
-    // alignItems: 'flex-end',
-    // backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  listItemTimeLabel: {
-    marginRight: 5,
-    fontWeight: '400',
   },
   listItemSingleText: {
-    // fontSize: 13,
-    // paddingTop: 2,
-    flexGrow: 0,
     flexShrink: 1,
-    fontWeight: '300',
+    fontWeight: '400',
   },
-  listItemBadge: {
-    // fontSize: 10,
-    paddingLeft: 5,
-    paddingTop: 2,
-    alignSelf: 'flex-start',
-  },
-  listItemRight: {
-    flexGrow: 0,
+  duration: {
+    width: 46,
     flexShrink: 0,
-    flexBasis: 'auto',
-    justifyContent: 'center',
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   moreButton: {
-    height: '80%',
-    paddingLeft: 16,
-    paddingRight: 16,
-    // paddingTop: 10,
-    // paddingBottom: 10,
-    // backgroundColor: 'rgba(0,0,0,0.2)',
+    height: '100%',
+    width: 44,
+    flexShrink: 0,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-})
-
+}))

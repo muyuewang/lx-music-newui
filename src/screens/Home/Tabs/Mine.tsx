@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import Text from '@/components/common/Text'
 import StatusBar from '@/components/common/StatusBar'
-import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
+import { useDockLayout } from '@/components/common/BottomDock'
 import GlassSurface from '@/components/liquid/GlassSurface'
 import GlassIconButton from '@/components/liquid/GlassIconButton'
 import {
@@ -147,6 +147,7 @@ const SectionTitle = themedMemo(({ title }: { title: string }) => (
 
 const HomeView = themedMemo(({ onOpen }: { onOpen: (view: SubView, listId?: string) => void }) => {
   const t = useI18n()
+  const { contentBottom } = useDockLayout()
   const statusBarHeight = useStatusbarHeight()
   const lists = useMyList()
   const showBackBtn = useSettingValue('common.showBackBtn')
@@ -199,7 +200,7 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (view: SubView, listId?: stri
         <GlassIconButton icon="setting" onPress={() => { onOpen('setting') }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: contentBottom }]} showsVerticalScrollIndicator={false}>
         <View style={styles.quickRow}>
           <QuickEntry
             icon="list-order"
@@ -397,8 +398,6 @@ const styles = createThemedStyle(() => StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: TIDE_SPACE.screen,
-    // 与首页一致：悬浮胶囊底座 + 迷你播放器是固定的，内容必须能滚过去
-    paddingBottom: DOCK_CONTENT_BOTTOM,
   },
   quickRow: {
     flexDirection: 'row',

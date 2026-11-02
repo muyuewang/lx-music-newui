@@ -5,7 +5,7 @@ import { Icon } from '@/components/common/Icon'
 import Text from '@/components/common/Text'
 import StatusBar from '@/components/common/StatusBar'
 import Image from '@/components/common/Image'
-import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
+import { useDockLayout } from '@/components/common/BottomDock'
 import GlassIconButton from '@/components/liquid/GlassIconButton'
 import GradientView from '@/components/liquid/GradientView'
 import {
@@ -18,7 +18,7 @@ import {
   createThemedStyle,
 } from '@/components/liquid/tide'
 import { useStatusbarHeight } from '@/store/common/hook'
-import { useMyList } from '@/store/list/hook'
+import { useActiveListId, useMyList } from '@/store/list/hook'
 import { usePlayerMusicInfo } from '@/store/player/hook'
 import { playList, playListById } from '@/core/player/player'
 import { setActiveList } from '@/core/list'
@@ -30,8 +30,9 @@ import { scaleSizeH, scaleSizeW } from '@/utils/pixelRatio'
 import SongList from '../Views/SongList'
 import Leaderboard from '../Views/Leaderboard'
 import Search from '../Views/Search'
+import Mylist from '../Views/Mylist'
 
-type SubView = 'home' | 'search' | 'songlist' | 'top'
+type SubView = 'home' | 'search' | 'songlist' | 'mylist' | 'top'
 
 /**
  * 品牌渐变圆钮。
@@ -190,8 +191,8 @@ const PlaylistCard = themedMemo(({ name, count, picUrl, onPress }: {
   )
 })
 
-/** 最近播放行：封面、曲目信息与无底播放图标。 */
-const RecentRow = themedMemo(({ item, onPress }: {
+/** 试听列表预览：封面、曲目信息与无底播放图标。 */
+const PreviewRow = themedMemo(({ item, onPress }: {
   item: LX.Music.MusicInfo
   onPress: () => void
 }) => (
@@ -228,7 +229,8 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
   const statusBarHeight = useStatusbarHeight()
   const lists = useMyList()
   const playerMusic = usePlayerMusicInfo()
-  const [recent, setRecent] = useState<LX.Music.MusicInfo[]>([])
+  const { contentBottom } = useDockLayout()
+  const [preview, setPreview] = useState<LX.Music.MusicInfo[]>([])
   const [loveFirstPic, setLoveFirstPic] = useState<string | null>(null)
   // 每个列表的代表封面与曲目数：listId -> { pic, count }
   // 歌单本身没有封面字段，用「该列表第一首带封面的歌」当视觉代表。
@@ -236,22 +238,40 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
   // 看起来像坏掉的空玻璃板；有「0 首」这行字，用户立刻知道是列表空、不是界面挂了。
   const [listMeta, setListMeta] = useState<Record<string, { pic?: string, count: number }>>({})
 
-  // 首页数据全部取本地已有列表，不依赖任何在线接口：
-  // 「最近播放」用试听列表尾部的几首，「每日推荐」的封面借收藏里第一首的图。
+  // 试听列表可手动排序、也可从顶部插入，不能把其顺序当成播放历史。
   useEffect(() => {
-    void getListMusics(LIST_IDS.DEFAULT).then(musics => {
-      // 试听列表按加入顺序追加，末尾才是最近的
-      setRecent(musics.slice(-4).reverse())
-    })
-    void getListMusics(LIST_IDS.LOVE).then(musics => {
-      setLoveFirstPic(musics.find(m => m.meta?.picUrl)?.meta?.picUrl ?? null)
-    })
+    let cancelled = false
+    let revision = 0
+    const refresh = () => {
+      const currentRevision = ++revision
+      void Promise.all([
+        getListMusics(LIST_IDS.DEFAULT),
+        getListMusics(LIST_IDS.LOVE),
+      ]).then(([defaultMusics, loveMusics]) => {
+        if (cancelled || currentRevision !== revision) return
+        setPreview(defaultMusics.slice(0, 4))
+        setLoveFirstPic(loveMusics.find(m => m.meta?.picUrl)?.meta?.picUrl ?? null)
+      }).catch(() => {
+        // 读取失败时保留现有预览，等待下一次列表更新重试。
+      })
+    }
+    const handleMusicUpdate = (ids: string[]) => {
+      if (ids.includes(LIST_IDS.DEFAULT) || ids.includes(LIST_IDS.LOVE)) refresh()
+    }
+    refresh()
+    global.app_event.on('myListMusicUpdate', handleMusicUpdate)
+    return () => {
+      cancelled = true
+      global.app_event.off('myListMusicUpdate', handleMusicUpdate)
+    }
   }, [])
 
   // 列表结构变化（新建/删除歌单、增删歌曲）时刷新各列表封面与曲目数
   useEffect(() => {
     let cancelled = false
+    let revision = 0
     const refresh = () => {
+      const currentRevision = ++revision
       void Promise.all(lists.map(async list => {
         const musics = await getListMusics(list.id)
         return [list.id, {
@@ -259,10 +279,12 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
           count: musics.length,
         }] as const
       })).then(pairs => {
-        if (cancelled) return
+        if (cancelled || currentRevision !== revision) return
         const next: Record<string, { pic?: string, count: number }> = {}
         for (const [id, meta] of pairs) next[id] = meta
         setListMeta(next)
+      }).catch(() => {
+        // 单次读取失败不清空已有歌单封面及曲目数。
       })
     }
     refresh()
@@ -275,7 +297,7 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
     }
   }, [lists])
 
-  const handlePlayRecent = useCallback((id: string) => {
+  const handlePlayPreview = useCallback((id: string) => {
     void playListById(LIST_IDS.DEFAULT, id)
   }, [])
 
@@ -290,7 +312,7 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
 
   const handleOpenList = useCallback((id: string) => {
     setActiveList(id)
-    onOpen('songlist')
+    onOpen('mylist')
   }, [onOpen])
 
   const userLists = lists.slice(2)
@@ -325,7 +347,7 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: contentBottom }]}
         showsVerticalScrollIndicator={false}
       >
         <HeroCard picUrl={heroPic} onPlay={handlePlayDaily} />
@@ -340,9 +362,9 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
         {/* 根据你的喜好：横向卡片取用户自建歌单；
             没有自建歌单时退回「我的收藏 / 试听列表」，保证这一栏不会是空的 */}
         <SectionHeader
-          title={t('discover_for_you')}
+          title={t('mine_my_playlist')}
           actionText={t('discover_see_all')}
-          onAction={() => { onOpen('songlist') }}
+          onAction={() => { handleOpenList(userLists[0]?.id ?? LIST_IDS.DEFAULT) }}
         />
         <ScrollView
           horizontal
@@ -361,17 +383,17 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
         </ScrollView>
 
         <SectionHeader
-          title={t('discover_recent')}
+          title={t('list_name_default')}
           actionText={t('discover_see_all')}
           onAction={() => { handleOpenList(LIST_IDS.DEFAULT) }}
         />
-        {recent.length
-          ? recent.map(item => (
-              <RecentRow key={item.id} item={item} onPress={() => { handlePlayRecent(item.id) }} />
+        {preview.length
+          ? preview.map(item => (
+              <PreviewRow key={item.id} item={item} onPress={() => { handlePlayPreview(item.id) }} />
           ))
           : (
               <Text size={TIDE_TYPE.body.size} color={TIDE_COLOR.t3} style={styles.emptyHint}>
-                {t('discover_recent_empty')}
+                {t('list_empty_tip')}
               </Text>
             )}
       </ScrollView>
@@ -401,6 +423,8 @@ const SubHeader = themedMemo(({ title, onBack }: { title: string, onBack: () => 
 
 export default themedMemo(() => {
   const t = useI18n()
+  const activeListId = useActiveListId()
+  const lists = useMyList()
   const [view, setView] = useState<SubView>('home')
 
   // 切 Tab 时组件只是隐藏而不卸载，子页状态会残留，
@@ -436,6 +460,16 @@ export default themedMemo(() => {
           <SubHeader title={t('nav_songlist')} onBack={handleBack} />
           <View style={styles.flex}>
             <SongList />
+          </View>
+        </View>
+      )
+    case 'mylist':
+      return (
+        <View style={styles.container}>
+          <StatusBar />
+          <SubHeader title={lists.find(list => list.id === activeListId)?.name ?? t('nav_love')} onBack={handleBack} />
+          <View style={styles.flex}>
+            <Mylist />
           </View>
         </View>
       )
@@ -481,10 +515,6 @@ const styles = createThemedStyle(() => StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: TIDE_SPACE.screen,
-    // 内容要能滚过「悬浮胶囊底座 + 迷你播放器」两层浮层：
-    // 底座顶边距底 81、播放条再往上 12 且自身约 58 高，
-    // 所以底部内距取 DOCK_OUTER_SPACE + 76，否则最后一行永远压在玻璃下面
-    paddingBottom: DOCK_CONTENT_BOTTOM,
   },
   hero: {
     height: scaleSizeH(178),

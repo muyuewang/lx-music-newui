@@ -64,6 +64,23 @@ export const onScreenStateChange = (handler: (state: 'ON' | 'OFF') => void): () 
   }
 }
 
+export const observeDockViewport = (reactTag: number) => {
+  UtilsModule.observeDockViewport(reactTag)
+}
+
+export const stopObservingDockViewport = (reactTag: number) => {
+  UtilsModule.stopObservingDockViewport(reactTag)
+}
+
+export const onDockBottomInsetChange = (handler: (bottom: number) => void): (() => void) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  const eventEmitter = new NativeEventEmitter(UtilsModule)
+  const subscription = eventEmitter.addListener('dock-bottom-inset', (event: { bottom: number }) => {
+    if (typeof event.bottom === 'number' && Number.isFinite(event.bottom)) handler(Math.max(0, event.bottom))
+  })
+  return () => { subscription.remove() }
+}
+
 export const getWindowSize = async(): Promise<{ width: number, height: number }> => {
   return UtilsModule.getWindowSize()
 }

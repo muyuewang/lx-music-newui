@@ -11,10 +11,11 @@ import {
 } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
+import PlayQueue from '@/components/player/PlayQueue'
 import Text from '@/components/common/Text'
 import StatusBar from '@/components/common/StatusBar'
 import Image from '@/components/common/Image'
-import { DOCK_OUTER_SPACE } from '@/components/common/BottomDock'
+import { useDockLayout } from '@/components/common/BottomDock'
 import { BlurView } from '@react-native-community/blur'
 import { SpectrumProgressBar, LiquidSlider, GlassChip, GradientView, LiquidButton } from '@/components/liquid'
 import { usePressScale } from '@/components/liquid/animation'
@@ -370,8 +371,10 @@ const VolumeRow = themedMemo(() => {
 export default themedMemo(() => {
   const t = useI18n()
   const statusBarHeight = useStatusbarHeight()
+  const { outerSpace } = useDockLayout()
   const musicInfo = usePlayerMusicInfo()
   const isPlay = useIsPlay()
+  const [queueVisible, setQueueVisible] = useState(false)
   const { width, height } = useWindowDimensions()
   // 播放页背景与控件 overlay 必须按明暗分两套。
   // 原来无论主题一律 blurType="dark" + 两层深色压暗，
@@ -443,11 +446,7 @@ export default themedMemo(() => {
         </View>
       )}
 
-      {/* 顶部：左侧收起箭头 + 居中标题。
-          右侧原来有一个「更多」圆键，但它没有 onPress —— 点下去什么都不发生。
-          工程里也没有可复用的「歌曲操作」浮层（Mylist 下的 ListMenu 只服务于歌单），
-          与其留一个假控件，不如直接去掉；
-          这里保留同尺寸空占位，否则 space-between 会把标题推到右侧。 */}
+      {/* 队列入口始终可见；没有歌曲时打开会展示真实空态。 */}
       <View style={styles.header}>
         <SideBtn icon={ICON.down} size={18} diameter={34} onPress={handleCollapse} />
         <Text
@@ -457,14 +456,22 @@ export default themedMemo(() => {
         >
           {t('music_now_playing')}
         </Text>
-        <View style={styles.headerSpacer} />
+        <Pressable
+          onPress={() => { setQueueVisible(true) }}
+          accessibilityRole="button"
+          accessibilityLabel="打开播放队列"
+          style={({ pressed }) => [styles.queueEntry, pressed ? styles.queuePressed : null]}
+        >
+          <Icon name="list-order" size={18} color={TIDE_COLOR.t1} />
+          <Text size={11} color={TIDE_COLOR.t1}>队列</Text>
+        </Pressable>
       </View>
 
       {hasMusic
         ? (
             <ScrollView
               style={styles.body}
-              contentContainerStyle={styles.bodyContent}
+              contentContainerStyle={{ paddingBottom: outerSpace + scaleSizeH(16) }}
               showsVerticalScrollIndicator={false}
               nestedScrollEnabled
             >
@@ -561,6 +568,7 @@ export default themedMemo(() => {
               <Text size={13} color={TIDE_COLOR.t2} style={styles.emptyText}>{t('music_no_music')}</Text>
             </View>
           )}
+      <PlayQueue visible={queueVisible} onClose={() => { setQueueVisible(false) }} />
     </View>
   )
 })
@@ -590,15 +598,19 @@ const styles = createThemedStyle(() => (StyleSheet.create({
     // 中文标签拉开字距才有「系统状态标签」的味道，紧排会读成正文
     letterSpacing: 2.4,
   },
-  headerSpacer: {
-    width: 34,
-    height: 34,
+  queueEntry: {
+    minHeight: 44,
+    minWidth: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: 18,
+    backgroundColor: TIDE_COLOR.fillMid,
   },
+  queuePressed: { opacity: 0.65 },
   body: {
     flex: 1,
-  },
-  bodyContent: {
-    paddingBottom: DOCK_OUTER_SPACE + scaleSizeH(16),
   },
   coverWrap: {
     alignItems: 'center',

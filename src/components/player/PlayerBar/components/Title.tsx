@@ -1,29 +1,20 @@
-import { TouchableOpacity } from 'react-native'
+import { StyleSheet, TouchableOpacity } from 'react-native'
 import { usePlayerMusicInfo } from '@/store/player/hook'
-// import { toast } from '@/utils/tools'
-import { useSettingValue } from '@/store/setting/hook'
-import { useTheme } from '@/store/theme/hook'
 import playerState from '@/store/player/state'
 import Text from '@/components/common/Text'
 import { LIST_IDS } from '@/config/constant'
-import { createStyle, formatMusicName } from '@/utils/tools'
+import { createThemedStyle, useTideColor } from '@/components/liquid/tide'
+import { useI18n } from '@/lang'
 import { usePlayerBarOpen } from '../context'
 
-
-export default ({ isHome }: { isHome: boolean }) => {
-  // const { t } = useTranslation()
+export default () => {
   const musicInfo = usePlayerMusicInfo()
-  const downloadFileName = useSettingValue('download.fileName')
-  const theme = useTheme()
+  const palette = useTideColor()
+  const t = useI18n()
   const { open } = usePlayerBarOpen()
 
   const handlePress = () => {
-    // console.log('')
-    // console.log(playMusicInfo)
-    if (!musicInfo.id) return
-    // 动作由承载方注入：Home 里切到「音乐」Tab，
-    // 歌单详情（盖在 Home 之上的独立原生屏）里要先 pop 自己再切 Tab。
-    open()
+    if (musicInfo.id) open()
   }
 
   const handleLongPress = () => {
@@ -31,47 +22,33 @@ export default ({ isHome }: { isHome: boolean }) => {
     if (!listId || listId == LIST_IDS.DOWNLOAD) return
     global.app_event.jumpListPosition()
   }
-  // console.log('render title')
 
-  const title = musicInfo.id
-    ? musicInfo.singer
-      ? formatMusicName(downloadFileName, musicInfo.name, musicInfo.singer)
-      : musicInfo.name
-    : ''
-  // console.log(playMusicInfo)
   return (
-    <TouchableOpacity style={styles.container} onLongPress={handleLongPress} onPress={handlePress} activeOpacity={0.7} >
-      <Text color={theme['c-font-label']} numberOfLines={1}>{title}</Text>
+    <TouchableOpacity
+      style={styles.container}
+      accessibilityRole="button"
+      accessibilityLabel={musicInfo.id ? `${musicInfo.name}，${musicInfo.singer}，打开播放页` : t('music_no_music')}
+      onLongPress={handleLongPress}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
+      <Text size={14} color={palette.t1} style={styles.title} numberOfLines={1}>
+        {musicInfo.id ? musicInfo.name : t('music_no_music')}
+      </Text>
+      {musicInfo.id
+        ? <Text size={11} color={palette.t2} style={styles.singer} numberOfLines={1}>{musicInfo.singer || '未知歌手'}</Text>
+        : null}
     </TouchableOpacity>
   )
 }
-// const Singer = () => {
-//   const playMusicInfo = useGetter('player', 'playMusicInfo')
-//   return (
-//     <View style={{ flexGrow: 0, flexShrink: 0 }}>
-//       <Text style={{ width: '100%', color: AppColors.normal }} numberOfLines={1}>
-//         {playMusicInfo ? playMusicInfo.musicInfo.singer : ''}
-//       </Text>
-//     </View>
-//   )
-// }
-// const MusicName = () => {
-//   const playMusicInfo = useGetter('player', 'playMusicInfo')
-//   return (
-//     <View style={{ flexGrow: 0, flexShrink: 1 }}>
-//       <Text style={{ width: '100%', color: AppColors.normal }} numberOfLines={1}>
-//         {playMusicInfo ? playMusicInfo.musicInfo.name : '^-^'}
-//       </Text>
-//     </View>
-//   )
-// }
 
-const styles = createStyle({
+const styles = createThemedStyle(() => StyleSheet.create({
   container: {
     width: '100%',
     paddingHorizontal: 2,
-    // paddingBottom: 4,
-    // height: '50%',
-    // backgroundColor: 'rgba(0, 0, 0, .1)',
+    justifyContent: 'center',
+    minHeight: 44,
   },
-})
+  title: { fontWeight: '600' },
+  singer: { marginTop: 3 },
+}))

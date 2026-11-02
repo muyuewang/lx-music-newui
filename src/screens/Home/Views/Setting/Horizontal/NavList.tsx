@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { View, TouchableOpacity, FlatList, type FlatListProps } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
@@ -9,7 +9,7 @@ import Text from '@/components/common/Text'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import { SETTING_SCREENS, type SettingScreenIds } from '../Main'
 import { useI18n } from '@/lang'
-import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
+import { useDockLayout } from '@/components/common/BottomDock'
 import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
 import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
@@ -57,7 +57,18 @@ export default ({ onChangeId }: {
 }) => {
   const flatListRef = useRef<FlatList>(null)
   const isLiquid = isLiquidGlass(useTheme())
+  const { contentBottom } = useDockLayout()
   const [activeId, setActiveId] = useState(global.lx.settingActiveId)
+
+  const revealSelected = useCallback(() => {
+    const index = SETTING_SCREENS.indexOf(activeId)
+    if (index < 0) return
+    flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 })
+  }, [activeId])
+
+  useEffect(() => {
+    revealSelected()
+  }, [revealSelected])
 
   const handleChangeId = (id: SettingScreenIds) => {
     onChangeId(id)
@@ -65,7 +76,7 @@ export default ({ onChangeId }: {
     global.lx.settingActiveId = id
   }
 
-  const renderItem: FlatListType['renderItem'] = ({ item, index }) => (
+  const renderItem: FlatListType['renderItem'] = ({ item }) => (
     <ListItem
       key={item}
       id={item}
@@ -82,8 +93,11 @@ export default ({ onChangeId }: {
     <FlatList
       ref={flatListRef}
       style={styles.container}
-      contentContainerStyle={isLiquid && styles.tideContent}
+      contentContainerStyle={isLiquid && { paddingBottom: contentBottom }}
       data={SETTING_SCREENS}
+      extraData={activeId}
+      onLayout={revealSelected}
+      onContentSizeChange={revealSelected}
       maxToRenderPerBatch={9}
       // updateCellsBatchingPeriod={80}
       windowSize={9}
@@ -99,9 +113,6 @@ export default ({ onChangeId }: {
 
 
 const styles = createThemedStyle(() => (createStyle({
-  tideContent: {
-    paddingBottom: DOCK_CONTENT_BOTTOM,
-  },
   tideItem: {
     marginHorizontal: TIDE_SPACE.row,
     borderRadius: TIDE_RADIUS.sm,

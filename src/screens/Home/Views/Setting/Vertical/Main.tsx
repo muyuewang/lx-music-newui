@@ -11,7 +11,7 @@ import Backup from '../settings/Backup'
 import Theme from '../settings/Theme'
 import Other from '../settings/Other'
 import { createStyle } from '@/utils/tools'
-import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
+import { useDockLayout } from '@/components/common/BottomDock'
 import { SETTING_SCREENS, type SettingScreenIds } from '../Main'
 import { useTheme } from '@/store/theme/hook'
 import { TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
@@ -32,16 +32,11 @@ const styles = createThemedStyle(() => (createStyle({
   tideContent: {
     paddingHorizontal: TIDE_SPACE.screen,
     paddingTop: TIDE_SPACE.section,
-    paddingBottom: DOCK_CONTENT_BOTTOM,
   },
   content: {
     paddingLeft: 15,
     paddingRight: 15,
     paddingTop: 15,
-    // 底部原本只有 15：设置页滚到最后一行时，那一行正好躲在迷你播放条背后，
-    // 用户以为到底了，其实「启用字体阴影」等选项还在下面。
-    // 统一走 DOCK_CONTENT_BOTTOM，把胶囊 + 播放条整组避让掉。
-    paddingBottom: DOCK_CONTENT_BOTTOM,
     flex: 0,
   },
 })))
@@ -64,6 +59,7 @@ const ListItem = memo(({
 
 export default () => {
   const theme = useTheme()
+  const { contentBottom } = useDockLayout()
   const [activeId, setActiveId] = useState<SettingScreenIds>(global.lx.settingActiveId)
   const handleChangeId = useCallback((id: SettingScreenIds) => {
     global.lx.settingActiveId = id
@@ -80,7 +76,7 @@ export default () => {
           key={activeId}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          contentContainerStyle={styles.tideContent}
+          contentContainerStyle={[styles.tideContent, { paddingBottom: contentBottom }]}
         >
           <ListItem id={activeId} />
         </ScrollView>
@@ -94,7 +90,7 @@ export default () => {
       keyboardShouldPersistTaps={'always'}
       renderItem={renderItem}
       keyExtractor={getkey}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: contentBottom }]}
       maxToRenderPerBatch={2}
       // updateCellsBatchingPeriod={80}
       windowSize={2}

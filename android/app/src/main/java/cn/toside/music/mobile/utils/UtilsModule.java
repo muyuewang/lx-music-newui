@@ -12,12 +12,17 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.util.Log;
+import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowManager;
 
 import androidx.core.app.LocaleManagerCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
 import androidx.core.os.LocaleListCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
@@ -27,6 +32,8 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
+import com.facebook.react.bridge.UiThreadUtil;
+import com.facebook.react.uimanager.UIManagerModule;
 
 import java.io.File;
 import java.util.Locale;
@@ -36,6 +43,16 @@ public class UtilsModule extends ReactContextBaseJavaModule {
   private final ReactApplicationContext reactContext;
 
   private int listenerCount = 0;
+  private View dockViewport;
+  private ViewTreeObserver dockTreeObserver;
+  private int dockViewportTag = -1;
+  private float lastDockBottomInset = -1;
+  private final int[] dockViewportLocation = new int[2];
+  private final int[] dockWindowLocation = new int[2];
+  private final ViewTreeObserver.OnPreDrawListener dockLayoutListener = () -> {
+    updateDockBottomInset();
+    return true;
+  };
 
   UtilsEvent utilsEvent;
 
@@ -332,6 +349,70 @@ public class UtilsModule extends ReactContextBaseJavaModule {
   //      );
   //    });
   //  }
+
+  @ReactMethod
+  public void observeDockViewport(int reactTag) {
+    UIManagerModule uiManager = reactContext.getNativeModule(UIManagerModule.class);
+    if (uiManager == null) return;
+    uiManager.addUIBlock(manager -> {
+      clearDockViewport();
+      try {
+        dockViewport = manager.resolveView(reactTag);
+        dockViewportTag = reactTag;
+        dockTreeObserver = dockViewport.getViewTreeObserver();
+        dockTreeObserver.addOnPreDrawListener(dockLayoutListener);
+        updateDockBottomInset();
+      } catch (Exception e) {
+        clearDockViewport();
+        Log.w("Utils", "无法观察Dock视口", e);
+      }
+    });
+  }
+
+  @ReactMethod
+  public void stopObservingDockViewport(int reactTag) {
+    UiThreadUtil.runOnUiThread(() -> {
+      if (dockViewportTag == reactTag) clearDockViewport();
+    });
+  }
+
+  private void updateDockBottomInset() {
+    Activity activity = getCurrentActivity();
+    if (activity == null || dockViewport == null || !ViewCompat.isAttachedToWindow(dockViewport)) return;
+    View decor = activity.getWindow().getDecorView();
+    WindowInsetsCompat windowInsets = ViewCompat.getRootWindowInsets(decor);
+    if (windowInsets == null || dockViewport.getHeight() == 0) return;
+    Insets insets = windowInsets.getInsets(
+      WindowInsetsCompat.Type.navigationBars() | WindowInsetsCompat.Type.displayCutout());
+    dockViewport.getLocationInWindow(dockViewportLocation);
+    decor.getLocationInWindow(dockWindowLocation);
+    int viewportBottom = dockViewportLocation[1] + dockViewport.getHeight();
+    int safeWindowBottom = dockWindowLocation[1] + decor.getHeight() - insets.bottom;
+    // 只让出真正压在RN视口内的系统区域；非沉浸窗口已在系统导航栏上方结束，重叠为0。
+    int overlap = Math.max(0, Math.min(insets.bottom, viewportBottom - safeWindowBottom));
+    float bottomInset = overlap / dockViewport.getResources().getDisplayMetrics().density;
+    if (bottomInset == lastDockBottomInset) return;
+    lastDockBottomInset = bottomInset;
+    WritableMap params = Arguments.createMap();
+    params.putDouble("bottom", bottomInset);
+    utilsEvent.sendEvent("dock-bottom-inset", params);
+  }
+
+  private void clearDockViewport() {
+    if (dockTreeObserver != null && dockTreeObserver.isAlive()) {
+      dockTreeObserver.removeOnPreDrawListener(dockLayoutListener);
+    }
+    dockTreeObserver = null;
+    dockViewport = null;
+    dockViewportTag = -1;
+    lastDockBottomInset = -1;
+  }
+
+  @Override
+  public void invalidate() {
+    UiThreadUtil.runOnUiThread(this::clearDockViewport);
+    super.invalidate();
+  }
 
   @ReactMethod
   public void getWindowSize(Promise promise) {

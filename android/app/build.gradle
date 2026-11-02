@@ -239,7 +239,7 @@ tasks.register("copyApksToDist", Copy) {
     // 用配置期就能拿到的 versionName 作为子目录名，保证与产物文件名同源。
     def versionDir = new File(distRoot, "v${verName}")
     from("${buildDir}/outputs/apk/release") {
-        include "*.apk"
+        include "${applicationName}-v${verName}-*.apk"
     }
     into versionDir
     doLast {

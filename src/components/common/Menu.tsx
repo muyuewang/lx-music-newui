@@ -1,5 +1,6 @@
 import { useImperativeHandle, forwardRef, useMemo, useRef, useState, type Ref } from 'react'
-import { View, Animated, TouchableHighlight } from 'react-native'
+import { View, ScrollView, TouchableHighlight, type LayoutChangeEvent } from 'react-native'
+import { useStatusbarHeight } from '@/store/common/hook'
 import { useWindowSize } from '@/utils/hooks'
 
 import Modal, { type ModalType } from './Modal'
@@ -86,8 +87,14 @@ const Menu = ({
   const theme = useTheme()
   const isTide = isLiquidGlass(theme)
   const windowSize = useWindowSize()
-  // const fadeAnim = useRef(new Animated.Value(0)).current
-  // console.log(buttonPosition)
+  const statusBarHeight = useStatusbarHeight()
+  const [viewport, setViewport] = useState<{ width: number, height: number } | null>(null)
+  const handleViewportLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout
+    setViewport(previous => previous?.width === width && previous.height === height ? previous : { width, height })
+  }
+  const viewportWidth = viewport?.width ?? windowSize.width
+  const viewportHeight = viewport?.height ?? windowSize.height
 
   const menuItemStyle = useMemo(() => {
     return {
@@ -97,34 +104,25 @@ const Menu = ({
   }, [menuSize, width, height, isTide])
 
   const menuStyle = useMemo(() => {
-    let menuHeight = menus.length * menuItemStyle.height + (isTide ? 2 : 0)
-    const topHeight = buttonPosition.y - 20
-    const bottomHeight = windowSize.height - buttonPosition.y - buttonPosition.h - 20
-    if (menuHeight > topHeight && menuHeight > bottomHeight) menuHeight = Math.max(topHeight, bottomHeight)
-
-    const menuWidth = menuItemStyle.width
-    const bottomSpace = windowSize.height - buttonPosition.y - buttonPosition.h - 20
-    const rightSpace = windowSize.width - buttonPosition.x - menuWidth
-    const showInBottom = bottomSpace >= menuHeight
-    const showInRight = rightSpace >= menuWidth
-    const frameStyle: {
-      height: number
-      width: number
-      top: number
-      left?: number
-      right?: number
-    } = {
-      height: menuHeight,
-      top: showInBottom ? buttonPosition.y + buttonPosition.h : buttonPosition.y - menuHeight,
-      width: menuWidth,
-    }
-    if (showInRight) {
-      frameStyle.left = buttonPosition.x
-    } else {
-      frameStyle.right = windowSize.width - buttonPosition.x - buttonPosition.w
-    }
-    return frameStyle
-  }, [menus.length, menuItemStyle, buttonPosition, windowSize, isTide])
+    const margin = 12
+    // Modal 允许延伸到状态栏，使用其实际布局而不是主页面的可用高度。
+    const minTop = statusBarHeight + margin
+    const maxBottom = Math.max(minTop, viewportHeight - margin)
+    const availableHeight = Math.max(0, maxBottom - minTop)
+    const contentHeight = menus.length * menuItemStyle.height + (isTide ? 2 : 0)
+    const menuHeight = Math.min(contentHeight, availableHeight)
+    const menuWidth = Math.min(menuItemStyle.width, Math.max(0, viewportWidth - margin * 2))
+    const below = buttonPosition.y + buttonPosition.h
+    // 短菜单优先出现在按钮下方；长菜单可跨越锚点占满可用高度，
+    // 不必只挤在按钮某一侧。仍保留滚动以容纳小屏/横屏菜单。
+    const preferredTop = below + menuHeight <= maxBottom ? below : buttonPosition.y - menuHeight
+    const top = Math.max(minTop, Math.min(preferredTop, maxBottom - menuHeight))
+    const preferredLeft = buttonPosition.x + menuWidth <= viewportWidth - margin
+      ? buttonPosition.x
+      : buttonPosition.x + buttonPosition.w - menuWidth
+    const left = Math.max(margin, Math.min(preferredLeft, viewportWidth - margin - menuWidth))
+    return { top, left, width: menuWidth, height: menuHeight }
+  }, [menus.length, menuItemStyle, buttonPosition, viewportWidth, viewportHeight, statusBarHeight, isTide])
 
   const menuPress = (menu: Menus[number]) => {
     // if (menu.disabled) return
@@ -137,15 +135,16 @@ const Menu = ({
   // console.log(menuStyle)
   // console.log(menuItemStyle)
   return (
-    <View style={{ ...styles.menu, ...menuStyle, backgroundColor: theme['c-content-background'], ...(isTide ? styles.tideMenu : {}) }} onStartShouldSetResponder={() => true}>
-      <Animated.ScrollView keyboardShouldPersistTaps={'always'}>
+    <View style={{ flex: 1 }} pointerEvents="box-none" onLayout={handleViewportLayout}>
+    <View style={{ ...styles.menu, ...menuStyle, backgroundColor: theme['c-content-background'], ...(isTide ? styles.tideMenu : {}) }} accessibilityViewIsModal>
+      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator persistentScrollbar nestedScrollEnabled>
         {
           menus.map((menu, index) => (
             menu.disabled
               ? (
                   <View
                     key={menu.action}
-                    style={{ ...styles.menuItem, width: menuItemStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height, opacity: 0.4 }}
+                    style={{ ...styles.menuItem, width: menuStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height, opacity: 0.4 }}
                   >
                     <Text style={{ textAlign: center ? 'center' : 'left' }} color={isTide ? TIDE_COLOR.t1 : undefined} size={fontSize} numberOfLines={1}>{menu.label}</Text>
                   </View>
@@ -154,7 +153,7 @@ const Menu = ({
                 ? (
                     <View
                       key={menu.action}
-                      style={{ ...styles.menuItem, width: menuItemStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height }}
+                      style={{ ...styles.menuItem, width: menuStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height }}
                     >
                       <Text style={{ textAlign: center ? 'center' : 'left' }} color={isTide ? TIDE_COLOR.a2 : theme['c-primary-font-active']} size={fontSize} numberOfLines={1}>{menu.label}</Text>
                     </View>
@@ -162,7 +161,9 @@ const Menu = ({
                 : (
                     <TouchableHighlight
                       key={menu.action}
-                      style={{ ...styles.menuItem, width: menuItemStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height }}
+                      style={{ ...styles.menuItem, width: menuStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height }}
+                      accessibilityRole="button"
+                      accessibilityLabel={menu.label}
                       underlayColor={isTide ? TIDE_COLOR.fillMid : theme['c-primary-background-active']}
                       onPress={() => { menuPress(menu) }}
                     >
@@ -172,7 +173,8 @@ const Menu = ({
 
           ))
         }
-      </Animated.ScrollView>
+      </ScrollView>
+    </View>
     </View>
   )
 }

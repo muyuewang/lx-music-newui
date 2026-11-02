@@ -5,7 +5,7 @@ import Main, { type MainType } from '../Main'
 import { createStyle } from '@/utils/tools'
 import { BorderWidths } from '@/theme'
 import { useTheme } from '@/store/theme/hook'
-import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
+import { useDockLayout } from '@/components/common/BottomDock'
 import { TIDE_COLOR, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
 import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
@@ -23,7 +23,6 @@ const styles = createThemedStyle(() => (createStyle({
   tideMain: {
     paddingHorizontal: TIDE_SPACE.screen,
     paddingTop: TIDE_SPACE.section,
-    paddingBottom: DOCK_CONTENT_BOTTOM,
   },
   container: {
     flex: 1,
@@ -46,6 +45,7 @@ const styles = createThemedStyle(() => (createStyle({
 
 export default () => {
   const theme = useTheme()
+  const { contentBottom } = useDockLayout()
   const mainRef = useRef<MainType>(null)
   const scrollRef = useRef<ScrollView>(null)
   const isLiquid = isLiquidGlass(theme)
@@ -59,7 +59,7 @@ export default () => {
         }} />
       </View>
       <ScrollView ref={scrollRef} keyboardShouldPersistTaps={'always'} keyboardDismissMode="on-drag">
-        <View style={[styles.main, isLiquid && styles.tideMain]}>
+        <View style={[styles.main, isLiquid && styles.tideMain, { paddingBottom: contentBottom }]}>
           <Main ref={mainRef} />
         </View>
       </ScrollView>

@@ -9,7 +9,7 @@ import { useAssertApiSupport } from '@/store/common/hook'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import Text from '@/components/common/Text'
 import Badge from '@/components/common/Badge'
-import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { TIDE_COLOR, TIDE_RADIUS, createThemedStyle } from '@/components/liquid/tide'
 import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 export const ITEM_HEIGHT = scaleSizeH(LIST_ITEM_HEIGHT)
@@ -28,6 +28,7 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
   isShowInterval: boolean
 }) => {
   const theme = useTheme()
+  const liquid = isLiquidGlass(theme)
 
   const isSelected = selectedList.includes(item)
   // console.log(item.name, selectedList, selectedList.includes(item))
@@ -46,47 +47,45 @@ export default memo(({ item, index, activeIndex, onPress, onShowMenu, onLongPres
   const singer = `${item.singer}${isShowAlbumName && item.meta.albumName ? ` · ${item.meta.albumName}` : ''}`
 
   return (
-    <View style={[styles.listItem, { width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)', opacity: isSupported ? 1 : 0.5 }, isLiquidGlass(theme) && styles.tideItem, isLiquidGlass(theme) && active && styles.tideActive, isLiquidGlass(theme) && isSelected && styles.tideSelected]}>
-      <TouchableOpacity style={styles.listItemLeft} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
+    <View style={[styles.listItem, { width: rowInfo.rowWidth, height: ITEM_HEIGHT, backgroundColor: isSelected ? theme['c-primary-background-hover'] : 'rgba(0,0,0,0)', opacity: isSupported ? 1 : 0.5 }, liquid && styles.tideItem, liquid && active && styles.tideActive, liquid && isSelected && styles.tideSelected]}>
+      <TouchableOpacity style={styles.listItemLeft} accessibilityRole="button" accessibilityLabel={`${item.name}，${item.singer}`} accessibilityState={{ selected: isSelected }} onPress={() => { onPress(item, index) }} onLongPress={() => { onLongPress(item, index) }}>
         {
           active
             ? <Icon style={styles.sn} name="play-outline" size={13} color={theme['c-primary-font']} />
-            : <Text style={styles.sn} size={13} color={theme['c-300']}>{index + 1}</Text>
+            : <Text style={styles.sn} size={12} color={liquid ? TIDE_COLOR.t3 : theme['c-300']}>{index + 1}</Text>
         }
         <View style={styles.itemInfo}>
           {/* <View style={styles.listItemTitle}> */}
-          <Text color={active ? theme['c-primary-font'] : theme['c-font']} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.title} size={14} color={liquid ? (active ? TIDE_COLOR.a1 : TIDE_COLOR.t1) : (active ? theme['c-primary-font'] : theme['c-font'])} numberOfLines={1}>{item.name}</Text>
           {/* </View> */}
           <View style={styles.listItemSingle}>
             <Badge>{item.source.toUpperCase()}</Badge>
-            <Text style={styles.listItemSingleText} size={11} color={active ? theme['c-primary-alpha-200'] : theme['c-500']} numberOfLines={1}>
+            <Text style={styles.listItemSingleText} size={12} color={liquid ? TIDE_COLOR.t2 : (active ? theme['c-primary-alpha-200'] : theme['c-500'])} numberOfLines={1}>
               {singer}
             </Text>
           </View>
         </View>
         {
           isShowInterval ? (
-            <Text size={12} color={active ? theme['c-primary-alpha-400'] : theme['c-250']} numberOfLines={1}>{item.interval}</Text>
+            <Text style={styles.duration} size={12} color={liquid ? TIDE_COLOR.t3 : (active ? theme['c-primary-alpha-400'] : theme['c-250'])} numberOfLines={1}>{item.interval}</Text>
           ) : null
         }
       </TouchableOpacity>
       {/* <View style={styles.listItemRight}> */}
-      <TouchableOpacity onPress={handleShowMenu} ref={moreButtonRef} style={styles.moreButton}>
-        <Icon name="dots-vertical" style={{ color: theme['c-350'] }} size={12} />
+      <TouchableOpacity onPress={handleShowMenu} ref={moreButtonRef} style={styles.moreButton} accessibilityRole="button" accessibilityLabel={`${item.name}，更多操作`}>
+        <Icon name="dots-vertical" color={liquid ? TIDE_COLOR.t2 : theme['c-350']} size={18} />
       </TouchableOpacity>
       {/* </View> */}
     </View>
   )
-}, (prevProps, nextProps) => {
-  return !!(prevProps.item === nextProps.item &&
-    prevProps.index === nextProps.index &&
-    prevProps.isShowAlbumName === nextProps.isShowAlbumName &&
-    prevProps.isShowInterval === nextProps.isShowInterval &&
-    prevProps.activeIndex != nextProps.index &&
-    nextProps.activeIndex != nextProps.index &&
-    nextProps.selectedList.includes(nextProps.item) == prevProps.selectedList.includes(nextProps.item)
-  )
-})
+}, (prev, next) => (
+  prev.item === next.item && prev.index === next.index &&
+  prev.rowInfo.rowWidth === next.rowInfo.rowWidth &&
+  prev.onPress === next.onPress && prev.onLongPress === next.onLongPress && prev.onShowMenu === next.onShowMenu &&
+  prev.isShowAlbumName === next.isShowAlbumName && prev.isShowInterval === next.isShowInterval &&
+  (prev.activeIndex === prev.index) === (next.activeIndex === next.index) &&
+  next.selectedList.includes(next.item) === prev.selectedList.includes(prev.item)
+))
 
 
 const styles = createThemedStyle(() => (createStyle({
@@ -94,7 +93,7 @@ const styles = createThemedStyle(() => (createStyle({
     borderRadius: TIDE_RADIUS.md,
     borderWidth: 1,
     borderColor: 'transparent',
-    paddingRight: TIDE_SPACE.row,
+    paddingRight: 2,
     backgroundColor: 'transparent',
   },
   tideActive: {
@@ -118,11 +117,14 @@ const styles = createThemedStyle(() => (createStyle({
     flex: 1,
     flexGrow: 1,
     flexShrink: 1,
+    height: '100%',
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
   },
   sn: {
-    width: 38,
+    width: 34,
+    flexShrink: 0,
     // fontSize: 12,
     textAlign: 'center',
     // backgroundColor: 'rgba(0,0,0,0.2)',
@@ -130,11 +132,16 @@ const styles = createThemedStyle(() => (createStyle({
     paddingRight: 3,
   },
   itemInfo: {
-    flexGrow: 1,
-    flexShrink: 1,
-    // paddingTop: 10,
-    // paddingBottom: 10,
-    paddingRight: 2,
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
+  },
+  title: { fontWeight: '500' },
+  duration: {
+    width: 46,
+    flexShrink: 0,
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   // listItemTitle: {
   //   flexGrow: 0,
@@ -149,7 +156,7 @@ const styles = createThemedStyle(() => (createStyle({
     // backgroundColor: 'rgba(0,0,0,0.2)',
     flexGrow: 0,
     flexShrink: 1,
-    fontWeight: '300',
+    fontWeight: '400',
     // fontSize: 15,
   },
   // listItemBadge: {
@@ -166,9 +173,10 @@ const styles = createThemedStyle(() => (createStyle({
   },
 
   moreButton: {
-    height: '80%',
-    paddingLeft: 16,
-    paddingRight: 16,
+    height: '100%',
+    width: 44,
+    flexShrink: 0,
+    alignItems: 'center',
     // paddingTop: 10,
     // paddingBottom: 10,
     // backgroundColor: 'rgba(0,0,0,0.2)',

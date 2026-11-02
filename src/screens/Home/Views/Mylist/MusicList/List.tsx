@@ -17,7 +17,7 @@ import { useSettingValue } from '@/store/setting/hook'
 import { Icon } from '@/components/common/Icon'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
-import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
+import { useDockLayout } from '@/components/common/BottomDock'
 import { TIDE_COLOR } from '@/components/liquid/tide'
 
 type FlatListType = FlatListProps<LX.Music.MusicInfo>
@@ -51,6 +51,7 @@ const usePlayIndex = () => {
 
 const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, onSelectAll }, ref) => {
   const t = useI18n()
+  const { contentBottom } = useDockLayout()
   const flatListRef = useRef<FlatList>(null)
   const [currentList, setList] = useState<LX.List.ListMusics>([])
   const listFirstScrollRef = useRef(false)
@@ -291,7 +292,7 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
       style={styles.list}
       data={currentList}
       ListEmptyComponent={renderEmpty}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={{ paddingBottom: contentBottom }}
       maxToRenderPerBatch={4}
       numColumns={rowInfo.current.rowNum}
       horizontal={false}
@@ -314,11 +315,6 @@ const styles = createStyle({
   list: {
     flexGrow: 1,
     flexShrink: 1,
-  },
-  content: {
-    // 列表要能滚过「悬浮胶囊 + 迷你播放条」两层浮层，
-    // 否则最后几首永远压在玻璃下面点不到
-    paddingBottom: DOCK_CONTENT_BOTTOM,
   },
   empty: {
     paddingTop: 72,

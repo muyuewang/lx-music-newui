@@ -1,7 +1,8 @@
-import { memo, type ReactNode } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { memo, useEffect, useRef, type ReactNode } from 'react'
+import { findNodeHandle, StyleSheet, View } from 'react-native'
 
-import BottomDock, { DOCK_OUTER_SPACE } from '@/components/common/BottomDock'
+import BottomDock, { useDockLayout } from '@/components/common/BottomDock'
+import { observeDockViewport, stopObservingDockViewport } from '@/utils/nativeModules/utils'
 import { useActiveTab } from '@/store/common/hook'
 import Discover from './Discover'
 import Music from './Music'
@@ -14,6 +15,8 @@ const TabPage = memo(({ visible, children }: { visible: boolean, children: React
   <View
     style={visible ? styles.page : styles.pageHidden}
     pointerEvents={visible ? 'auto' : 'none'}
+    accessibilityElementsHidden={!visible}
+    importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
   >
     {children}
   </View>
@@ -21,9 +24,18 @@ const TabPage = memo(({ visible, children }: { visible: boolean, children: React
 
 export default memo(({ children }: { children?: ReactNode }) => {
   const activeTab = useActiveTab()
+  const { outerSpace } = useDockLayout()
+  const viewportRef = useRef<View>(null)
+
+  useEffect(() => {
+    const reactTag = findNodeHandle(viewportRef.current)
+    if (reactTag == null) return
+    observeDockViewport(reactTag)
+    return () => { stopObservingDockViewport(reactTag) }
+  }, [])
 
   return (
-    <View style={styles.container}>
+    <View ref={viewportRef} collapsable={false} style={styles.container}>
       {/* stage 撑满全屏：三页 absolute 叠放，内容可以一直滚到 dock / 播放条
           正下方，被半透明玻璃盖住、透出来 —— 这才是参考图的磨砂玻璃透出效果。
           容器设为定位基准，让 dock 与播放条都 absolute 浮在它之上。 */}
@@ -41,7 +53,7 @@ export default memo(({ children }: { children?: ReactNode }) => {
       {/* 播放条浮在 dock 正上方（不是流内），这样它既不被 dock 盖住，
           也能像玻璃一样压在列表之上。仅「发现」「我的」显示。 */}
       {activeTab !== 'music'
-        ? <View style={styles.playerBarSlot}>{children}</View>
+        ? <View style={[styles.playerBarSlot, { bottom: outerSpace }]}>{children}</View>
         : null}
       {/* dock 浮在内容之上，模糊/透出它正下方的列表与封面 */}
       <BottomDock />
@@ -51,9 +63,9 @@ export default memo(({ children }: { children?: ReactNode }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex:1,
+    flex: 1,
     // 定位基准：dock 与播放条都 absolute 浮在它之上
-    position:'relative',
+    position: 'relative',
   },
   stage: {
     flex: 1,
@@ -64,7 +76,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: DOCK_OUTER_SPACE,
   },
   page: {
     ...StyleSheet.absoluteFillObject,

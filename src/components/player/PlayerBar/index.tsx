@@ -4,14 +4,12 @@ import { useKeyboard } from '@/utils/hooks'
 
 import Pic from './components/Pic'
 import Title from './components/Title'
-import PlayInfo from './components/PlayInfo'
 import ControlBtn from './components/ControlBtn'
-import { createStyle } from '@/utils/tools'
 import { useSettingValue } from '@/store/setting/hook'
 import { useProgress } from '@/store/player/hook'
 import GlassSurface from '@/components/liquid/GlassSurface'
 import GradientView from '@/components/liquid/GradientView'
-import { useTideColor, useTideGradient } from '@/components/liquid/tide'
+import { createThemedStyle, useTideColor, useTideGradient } from '@/components/liquid/tide'
 import { PlayerBarOpenContext, usePlayerBarOpen } from './context'
 
 // 顶部细进度线：把「播放到哪了」这个最高频信息提到最短路径上，
@@ -84,11 +82,7 @@ export default memo(({ isHome = false, onOpen }: {
         <View style={styles.row}>
           <Pic isHome={isHome} />
           <View style={styles.center}>
-            <Title isHome={isHome} />
-            {/* <View style={{ ...styles.row, justifyContent: 'space-between' }}>
-              <PlayTime />
-            </View> */}
-            <PlayInfo isHome={isHome} />
+            <Title />
           </View>
           <View style={styles.right}>
             <ControlBtn />
@@ -128,7 +122,7 @@ const progressStyles = StyleSheet.create({
   },
 })
 
-const styles = createStyle({
+const styles = createThemedStyle(() => StyleSheet.create({
   container: {
     width: '100%',
   },
@@ -168,9 +162,4 @@ const styles = createStyle({
     paddingLeft: 5,
     paddingRight: 5,
   },
-  // row: {
-  //   flexDirection: 'row',
-  //   flexGrow: 0,
-  //   flexShrink: 0,
-  // },
-})
+}))

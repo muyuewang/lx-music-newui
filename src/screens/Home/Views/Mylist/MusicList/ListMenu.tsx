@@ -80,8 +80,8 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
       { action: 'musicSourceDetail', disabled: isLocal, label: t('music_source_detail') },
       { action: 'removeCache', disabled: !has_url_cache, label: t('list_remove_cache') },
       // { action: 'musicSearch', label: t('music_search') },
-      { action: 'dislike', disabled: hasDislike(musicInfo), label: t('dislike') },
-      { action: 'remove', label: t('delete') },
+      { action: 'dislike', disabled: hasDislike(musicInfo), label: t('dislike'), dividerBefore: true },
+      { action: 'remove', label: t('delete'), danger: true },
     ]
     if (isLocal) menu.splice(5, 0, { action: 'editMetadata', disabled: !edit_metadata, label: t('edit_metadata') })
     setMenus(menu)

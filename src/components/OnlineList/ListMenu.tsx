@@ -63,7 +63,7 @@ export default forwardRef<ListMenuType, ListMenuProps>((props: ListMenuProps, re
       { action: 'copyName', label: t('copy_name') },
       { action: 'musicSourceDetail', label: t('music_source_detail') },
       { action: 'removeCache', disabled: !has_url_cache, label: t('list_remove_cache') },
-      { action: 'dislike', label: t('dislike'), disabled: hasDislike(musicInfo) },
+      { action: 'dislike', label: t('dislike'), disabled: hasDislike(musicInfo), dividerBefore: true },
     ]
     setMenus(menu)
     void hasUrlCache(musicInfo).then((_has_url_cache) => {

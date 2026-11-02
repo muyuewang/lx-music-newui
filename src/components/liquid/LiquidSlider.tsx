@@ -8,6 +8,8 @@ import {
   type ViewStyle,
 } from 'react-native'
 
+import { createThemedStyle, TIDE_COLOR, useTideColor } from './tide'
+
 interface Props {
   value: number
   onChange?: (value: number) => void
@@ -31,6 +33,7 @@ export default memo(({
   length = 160,
   style,
 }: Props) => {
+  useTideColor()
   const [size, setSize] = useState(0)
   const sizeRef = useRef(0)
   const valueRef = useRef(clamp(value))
@@ -141,19 +144,19 @@ export default memo(({
   )
 })
 
-const styles = StyleSheet.create({
+const styles = createThemedStyle(() => StyleSheet.create({
   wrap: { justifyContent: 'center' },
   track: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    backgroundColor: TIDE_COLOR.edge,
     overflow: 'hidden',
   },
   fill: {
     position: 'absolute',
     left: 0,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: TIDE_COLOR.t1,
   },
   knob: {
     position: 'absolute',
@@ -161,12 +164,12 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderColor: 'rgba(10, 12, 18, 0.22)',
+    backgroundColor: TIDE_COLOR.t1,
+    borderColor: TIDE_COLOR.edgeSoft,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     shadowOpacity: 0.3,
     elevation: 6,
   },
-})
+}))

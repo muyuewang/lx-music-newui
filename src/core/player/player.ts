@@ -148,7 +148,7 @@ export const setMusicUrl = (musicInfo: LX.Music.MusicInfo | LX.Download.ListItem
     const msg: string = err?.message ?? ''
     const isNoSource = /Api is not found|source init failed|api init/i.test(msg)
     setStatusText(
-      isNoSource ? global.i18n.t('player__no_api_source') : msg
+      isNoSource ? global.i18n.t('player__no_api_source') : msg,
     )
     global.app_event.error()
     // 无音源属于配置缺失，不是网络抖动：此时自动切下一首只会让每首歌
@@ -613,6 +613,32 @@ export const play = () => {
   void setPlay()
 }
 
+const currentRetry = { busy: false, generation: 0 }
+/**
+ * 重新解析当前歌曲；保留播放进度、主列表位置和稍后播放队列。
+ * 返回值只表示刷新已启动，加载结果仍由播放器事件反馈。
+ */
+export const retryCurrentMusic = async(): Promise<void> => {
+  const musicInfo = playerState.playMusicInfo.musicInfo
+  if (!musicInfo || global.lx.gettingUrlId || currentRetry.busy) return
+  if (!isInitialized()) throw new Error('播放器尚未就绪，请重新选择歌曲')
+  const generation = currentRetry.generation
+  currentRetry.busy = true
+  try {
+    clearDelayNextTimeout()
+    clearLoadTimeout()
+    // 清除原生播放错误留下的另一组超时，不触发切歌/歌词重置。
+    global.app_event.playerEmptied()
+    global.lx.isPlayedStop = false
+    await setPause()
+    if (playerState.playMusicInfo.musicInfo !== musicInfo || global.lx.isPlayedStop || generation !== currentRetry.generation) return
+    global.app_event.pause()
+    setMusicUrl(musicInfo, true)
+  } finally {
+    currentRetry.busy = false
+  }
+}
+
 /**
  * 暂停播放
  */
@@ -624,6 +650,7 @@ export const pause = async() => {
  * 停止播放
  */
 export const stop = async() => {
+  ++currentRetry.generation
   await setStop()
   setTimeout(() => {
     global.app_event.stop()

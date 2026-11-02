@@ -1,5 +1,5 @@
-import { useImperativeHandle, forwardRef, useMemo, useRef, useState, type Ref } from 'react'
-import { View, ScrollView, TouchableHighlight, type LayoutChangeEvent } from 'react-native'
+import { Fragment, useImperativeHandle, forwardRef, useMemo, useRef, useState, type Ref } from 'react'
+import { StyleSheet, View, ScrollView, TouchableHighlight, type LayoutChangeEvent } from 'react-native'
 import { useStatusbarHeight } from '@/store/common/hook'
 import { useWindowSize } from '@/utils/hooks'
 
@@ -17,7 +17,16 @@ const menuItemWidth = scaleSizeW(100)
 
 export interface Position { w: number, h: number, x: number, y: number, menuWidth?: number, menuHeight?: number }
 export interface MenuSize { width?: number, height?: number }
-export type Menus = Readonly<Array<{ action: string, label: string, disabled?: boolean }>>
+export interface MenuItem {
+  action: string
+  label: string
+  disabled?: boolean
+  /** 该项前方渲染一条分隔线，把次级 / 危险操作与前面的操作视觉隔开。 */
+  dividerBefore?: boolean
+  /** 危险操作：文字用红色强调（如「移除 / 删除」）。 */
+  danger?: boolean
+}
+export type Menus = Readonly<MenuItem[]>
 
 const styles = createThemedStyle(() => (createStyle({
   mask: {
@@ -86,6 +95,10 @@ const Menu = ({
 }: Props) => {
   const theme = useTheme()
   const isTide = isLiquidGlass(theme)
+  // 危险操作的文字色：液态玻璃按明暗各给一个可读的红，旧配色主题用 Material red。
+  const dangerColor = isTide
+    ? (!theme.isDark ? '#C62828' : '#FF8B8A')
+    : (!theme.isDark ? '#D32F2F' : '#EF5350')
   const windowSize = useWindowSize()
   const statusBarHeight = useStatusbarHeight()
   const [viewport, setViewport] = useState<{ width: number, height: number } | null>(null)
@@ -109,7 +122,8 @@ const Menu = ({
     const minTop = statusBarHeight + margin
     const maxBottom = Math.max(minTop, viewportHeight - margin)
     const availableHeight = Math.max(0, maxBottom - minTop)
-    const contentHeight = menus.length * menuItemStyle.height + (isTide ? 2 : 0)
+    const dividerCount = menus.filter(menu => menu.dividerBefore).length
+    const contentHeight = menus.length * menuItemStyle.height + dividerCount * StyleSheet.hairlineWidth + (isTide ? 2 : 0)
     const menuHeight = Math.min(contentHeight, availableHeight)
     const menuWidth = Math.min(menuItemStyle.width, Math.max(0, viewportWidth - margin * 2))
     const below = buttonPosition.y + buttonPosition.h
@@ -122,7 +136,7 @@ const Menu = ({
       : buttonPosition.x + buttonPosition.w - menuWidth
     const left = Math.max(margin, Math.min(preferredLeft, viewportWidth - margin - menuWidth))
     return { top, left, width: menuWidth, height: menuHeight }
-  }, [menus.length, menuItemStyle, buttonPosition, viewportWidth, viewportHeight, statusBarHeight, isTide])
+  }, [menus, menuItemStyle, buttonPosition, viewportWidth, viewportHeight, statusBarHeight, isTide])
 
   const menuPress = (menu: Menus[number]) => {
     // if (menu.disabled) return
@@ -139,39 +153,59 @@ const Menu = ({
     <View style={{ ...styles.menu, ...menuStyle, backgroundColor: theme['c-content-background'], ...(isTide ? styles.tideMenu : {}) }} accessibilityViewIsModal>
       <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator persistentScrollbar nestedScrollEnabled>
         {
-          menus.map((menu, index) => (
-            menu.disabled
-              ? (
-                  <View
-                    key={menu.action}
-                    style={{ ...styles.menuItem, width: menuStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height, opacity: 0.4 }}
-                  >
-                    <Text style={{ textAlign: center ? 'center' : 'left' }} color={isTide ? TIDE_COLOR.t1 : undefined} size={fontSize} numberOfLines={1}>{menu.label}</Text>
-                  </View>
-                )
-              : menu.action == activeId
-                ? (
-                    <View
-                      key={menu.action}
-                      style={{ ...styles.menuItem, width: menuStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height }}
-                    >
-                      <Text style={{ textAlign: center ? 'center' : 'left' }} color={isTide ? TIDE_COLOR.a2 : theme['c-primary-font-active']} size={fontSize} numberOfLines={1}>{menu.label}</Text>
-                    </View>
-                  )
-                : (
-                    <TouchableHighlight
-                      key={menu.action}
-                      style={{ ...styles.menuItem, width: menuStyle.width - (isTide ? 2 : 0), height: menuItemStyle.height }}
-                      accessibilityRole="button"
-                      accessibilityLabel={menu.label}
-                      underlayColor={isTide ? TIDE_COLOR.fillMid : theme['c-primary-background-active']}
-                      onPress={() => { menuPress(menu) }}
-                    >
-                      <Text style={{ textAlign: center ? 'center' : 'left' }} color={isTide ? TIDE_COLOR.t1 : undefined} size={fontSize} numberOfLines={1}>{menu.label}</Text>
-                    </TouchableHighlight>
-                  )
-
-          ))
+          menus.map((menu) => {
+            const itemWidth = menuStyle.width - (isTide ? 2 : 0)
+            const textColor = menu.danger
+              ? dangerColor
+              : isTide
+                ? (menu.action == activeId ? TIDE_COLOR.a2 : TIDE_COLOR.t1)
+                : (menu.action == activeId ? theme['c-primary-font-active'] : undefined)
+            const divider = menu.dividerBefore ? (
+              <View
+                style={{
+                  width: itemWidth,
+                  height: StyleSheet.hairlineWidth,
+                  backgroundColor: isTide ? TIDE_COLOR.edgeSoft : theme['c-border-background'],
+                }}
+              />
+            ) : null
+            let item
+            if (menu.disabled) {
+              item = (
+                <View
+                  style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height, opacity: 0.4 }}
+                >
+                  <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
+                </View>
+              )
+            } else if (menu.action == activeId) {
+              item = (
+                <View
+                  style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height }}
+                >
+                  <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
+                </View>
+              )
+            } else {
+              item = (
+                <TouchableHighlight
+                  style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height }}
+                  accessibilityRole="button"
+                  accessibilityLabel={menu.label}
+                  underlayColor={isTide ? TIDE_COLOR.fillMid : theme['c-primary-background-active']}
+                  onPress={() => { menuPress(menu) }}
+                >
+                  <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
+                </TouchableHighlight>
+              )
+            }
+            return (
+              <Fragment key={menu.action}>
+                {divider}
+                {item}
+              </Fragment>
+            )
+          })
         }
       </ScrollView>
     </View>

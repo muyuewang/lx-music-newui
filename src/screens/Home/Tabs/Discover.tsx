@@ -355,8 +355,8 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
         <View style={styles.entries}>
           <Entry icon="leaderboard" label={t('discover_entry_rank')} onPress={() => { onOpen('top') }} />
           <Entry icon="album" label={t('discover_entry_songlist')} onPress={() => { onOpen('songlist') }} />
-          <Entry icon="add-music" label={t('discover_entry_new')} onPress={() => { onOpen('songlist') }} />
-          <Entry icon="volume-medium" label={t('discover_entry_radio')} onPress={() => { onOpen('songlist') }} />
+          <Entry icon="love" label={t('list_name_love')} onPress={() => { handleOpenList(LIST_IDS.LOVE) }} />
+          <Entry icon="add-music" label={t('mine_my_playlist')} onPress={() => { handleOpenList(userLists[0]?.id ?? LIST_IDS.DEFAULT) }} />
         </View>
 
         {/* 根据你的喜好：横向卡片取用户自建歌单；
@@ -392,9 +392,14 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
               <PreviewRow key={item.id} item={item} onPress={() => { handlePlayPreview(item.id) }} />
           ))
           : (
-              <Text size={TIDE_TYPE.body.size} color={TIDE_COLOR.t3} style={styles.emptyHint}>
-                {t('list_empty_tip')}
-              </Text>
+              <TouchableOpacity style={styles.emptyHint} activeOpacity={0.7} onPress={() => { onOpen('songlist') }}>
+                <Text size={TIDE_TYPE.body.size} color={TIDE_COLOR.t3} style={TIDE_TYPE.body.style}>
+                  {t('list_empty_tip')}
+                </Text>
+                <Text size={TIDE_TYPE.body.size} color={TIDE_COLOR.a2} style={[TIDE_TYPE.body.style, styles.emptyGuide]}>
+                  {t('discover_empty_guide')}
+                </Text>
+              </TouchableOpacity>
             )}
       </ScrollView>
     </View>
@@ -673,6 +678,9 @@ const styles = createThemedStyle(() => StyleSheet.create({
   emptyHint: {
     paddingVertical: 14,
     paddingLeft: 2,
+  },
+  emptyGuide: {
+    marginTop: 6,
   },
   subHeader: {
     flexDirection: 'row',

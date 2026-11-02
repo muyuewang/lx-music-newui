@@ -13,6 +13,7 @@ export default () => {
 
   let loadingTimeout: number | null = null
   let delayNextTimeout: number | null = null
+  let pendingDelayNextTimeout: ReturnType<typeof setTimeout> | null = null
   const startLoadingTimeout = () => {
     // console.log('start load timeout')
     clearLoadingTimeout()
@@ -41,6 +42,10 @@ export default () => {
   }
 
   const clearDelayNextTimeout = () => {
+    if (pendingDelayNextTimeout !== null) {
+      clearTimeout(pendingDelayNextTimeout)
+      pendingDelayNextTimeout = null
+    }
     // console.log(this.delayNextTimeout)
     if (!delayNextTimeout) return
     BackgroundTimer.clearTimeout(delayNextTimeout)
@@ -107,7 +112,11 @@ export default () => {
 
     if (isActive()) {
       setStatusText(global.i18n.t('player__error'))
-      setTimeout(addDelayNextTimeout)
+      clearDelayNextTimeout()
+      pendingDelayNextTimeout = setTimeout(() => {
+        pendingDelayNextTimeout = null
+        addDelayNextTimeout()
+      })
     } else {
       console.warn('error skip to next')
       void playNext(true)

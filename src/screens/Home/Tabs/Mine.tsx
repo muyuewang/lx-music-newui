@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
@@ -12,6 +12,9 @@ import {
   TIDE_RADIUS,
   TIDE_SPACE,
   TIDE_TYPE,
+  useTideColor,
+  themedMemo,
+  createThemedStyle,
 } from '@/components/liquid/tide'
 import { useStatusbarHeight } from '@/store/common/hook'
 import { useActiveListId, useMyList } from '@/store/list/hook'
@@ -35,7 +38,7 @@ type SubView = 'home' | 'list' | 'setting'
  * 计数单独占一行而不是叠在图标角标上 —— 角标在 48dp 的圆上会压到图标，
  * 而这四个入口的计数本身就是「这个库有多少东西」的信息，值得占一行。
  */
-const QuickEntry = memo(({ icon, count, label, onPress }: {
+const QuickEntry = themedMemo(({ icon, count, label, onPress }: {
   icon: string
   count?: number
   label: string
@@ -71,7 +74,7 @@ const QuickEntry = memo(({ icon, count, label, onPress }: {
 ))
 
 /** 列表行：glass.soft 独立卡片，不是整组共用一块底（SPEC §3.4 glass.soft）。 */
-const ListRow = memo(({ cover, title, subtitle, onPress }: {
+const ListRow = themedMemo(({ cover, title, subtitle, onPress }: {
   cover?: React.ReactNode
   title: string
   subtitle?: string
@@ -80,7 +83,7 @@ const ListRow = memo(({ cover, title, subtitle, onPress }: {
   <TouchableOpacity style={styles.rowTouch} activeOpacity={0.7} onPress={onPress}>
     <View style={styles.listRow}>
       <View style={styles.rowCover}>
-        {cover ?? <Icon name="album" size={20} color="rgba(255, 255, 255, 0.55)" />}
+        {cover ?? <Icon name="album" size={20} color={TIDE_COLOR.t3} />}
       </View>
       <View style={styles.rowMeta}>
         <Text size={TIDE_TYPE.body.size} color={TIDE_COLOR.t1} numberOfLines={1}>
@@ -100,14 +103,14 @@ const ListRow = memo(({ cover, title, subtitle, onPress }: {
           : null}
       </View>
       <View style={styles.rowAction}>
-        <Icon name="play" size={11} color="rgba(255, 255, 255, 0.85)" />
+        <Icon name="play" size={11} color={TIDE_COLOR.t2} />
       </View>
     </View>
   </TouchableOpacity>
 ))
 
 /** 设置行：入口没有封面图，左侧换成图标，右侧改箭头。 */
-const SettingRow = memo(({ icon, label, onPress, danger }: {
+const SettingRow = themedMemo(({ icon, label, onPress, danger }: {
   icon: string
   label: string
   onPress: () => void
@@ -116,7 +119,7 @@ const SettingRow = memo(({ icon, label, onPress, danger }: {
   <TouchableOpacity style={styles.rowTouch} activeOpacity={0.65} onPress={onPress}>
     <View style={styles.listRow}>
       <View style={styles.rowCover}>
-        <Icon name={icon} size={17} color="rgba(255, 255, 255, 0.86)" />
+        <Icon name={icon} size={17} color={TIDE_COLOR.t1} />
       </View>
       <View style={styles.rowMeta}>
         <Text
@@ -132,7 +135,7 @@ const SettingRow = memo(({ icon, label, onPress, danger }: {
   </TouchableOpacity>
 ))
 
-const SectionTitle = memo(({ title }: { title: string }) => (
+const SectionTitle = themedMemo(({ title }: { title: string }) => (
   <Text
     size={TIDE_TYPE.headline.size}
     color={TIDE_COLOR.t1}
@@ -142,7 +145,7 @@ const SectionTitle = memo(({ title }: { title: string }) => (
   </Text>
 ))
 
-const HomeView = memo(({ onOpen }: { onOpen: (view: SubView, listId?: string) => void }) => {
+const HomeView = themedMemo(({ onOpen }: { onOpen: (view: SubView, listId?: string) => void }) => {
   const t = useI18n()
   const statusBarHeight = useStatusbarHeight()
   const lists = useMyList()
@@ -276,15 +279,18 @@ const HomeView = memo(({ onOpen }: { onOpen: (view: SubView, listId?: string) =>
   )
 })
 
-const SubHeader = memo(({ title, onBack }: { title: string, onBack: () => void }) => {
+const SubHeader = themedMemo(({ title, onBack }: { title: string, onBack: () => void }) => {
   const statusBarHeight = useStatusbarHeight()
+  // 必须订阅主题：本组件是 memo 的，切主题时父级不会重新调用它，
+  // 直接读 TIDE_COLOR.t1 会停在切换前的白色 —— 浅色主题下标题整条消失。
+  const palette = useTideColor()
 
   return (
     <View style={[styles.subHeader, { paddingTop: statusBarHeight + scaleSizeH(6) }]}>
       <GlassIconButton icon="chevron-left" size={38} iconSize={17} onPress={onBack} />
       <Text
         size={TIDE_TYPE.title1.size}
-        color={TIDE_COLOR.t1}
+        color={palette.t1}
         numberOfLines={1}
         style={[TIDE_TYPE.title1.style, styles.subTitle]}
       >
@@ -295,7 +301,7 @@ const SubHeader = memo(({ title, onBack }: { title: string, onBack: () => void }
   )
 })
 
-const ListView = memo(({ onBack }: { onBack: () => void }) => {
+const ListView = themedMemo(({ onBack }: { onBack: () => void }) => {
   const activeId = useActiveListId()
   const lists = useMyList()
   const title = lists.find(l => l.id === activeId)?.name ?? ''
@@ -311,7 +317,7 @@ const ListView = memo(({ onBack }: { onBack: () => void }) => {
   )
 })
 
-const SettingView = memo(({ onBack }: { onBack: () => void }) => {
+const SettingView = themedMemo(({ onBack }: { onBack: () => void }) => {
   const t = useI18n()
 
   return (
@@ -325,7 +331,7 @@ const SettingView = memo(({ onBack }: { onBack: () => void }) => {
   )
 })
 
-export default memo(() => {
+export default themedMemo(() => {
   const [view, setView] = useState<SubView>('home')
 
   // 切 Tab 时组件只是隐藏而非卸载，子页面状态会残留。
@@ -364,7 +370,10 @@ export default memo(() => {
   }
 })
 
-const styles = StyleSheet.create({
+// 分组卡 / 分隔线 / 封面占位都用了白色低透明叠色 ——
+// 浅色主题下白色压在近白底上等于不存在，分组边界会整块消失。
+// 走 createThemedStyle 让 edgeSoft / fillTop 这些令牌按明暗切换。
+const styles = createThemedStyle(() => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -425,9 +434,9 @@ const styles = StyleSheet.create({
   },
   group: {
     borderRadius: TIDE_RADIUS.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.035)',
+    backgroundColor: TIDE_COLOR.fillBottom,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: TIDE_COLOR.edgeSoft,
     overflow: 'hidden',
   },
   rowTouch: {},
@@ -437,7 +446,7 @@ const styles = StyleSheet.create({
     paddingVertical: scaleSizeH(12),
     paddingHorizontal: scaleSizeW(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: TIDE_COLOR.edgeSoft,
   },
   rowCover: {
     width: scaleSizeW(44),
@@ -445,7 +454,7 @@ const styles = StyleSheet.create({
     borderRadius: TIDE_RADIUS.sm - 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: TIDE_COLOR.fillTop,
   },
   rowMeta: {
     flexGrow: 1,
@@ -463,7 +472,7 @@ const styles = StyleSheet.create({
     borderRadius: scaleSizeW(15),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: TIDE_COLOR.fillMid,
     marginLeft: 4,
   },
   subHeader: {
@@ -480,4 +489,4 @@ const styles = StyleSheet.create({
   subHeaderSpacer: {
     width: 38,
   },
-})
+}))

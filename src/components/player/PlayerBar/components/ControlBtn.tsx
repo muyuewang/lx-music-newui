@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet } from 'react-native'
 import { Icon } from '@/components/common/Icon'
+import { TIDE_COLOR, createThemedStyle } from '@/components/liquid/tide'
 import { useIsPlay } from '@/store/player/hook'
 import { playNext, playPrev, togglePlay } from '@/core/player/player'
 import { useHorizontalMode } from '@/utils/hooks'
@@ -8,6 +9,8 @@ import { useHorizontalMode } from '@/utils/hooks'
 export default () => {
   const isPlay = useIsPlay()
   const horizontal = useHorizontalMode()
+  // 原来三个图标都硬编码 #FFFFFF：浅色玻璃上白图标等于消失，
+  // 必须换成会随明暗切换的 TIDE_COLOR.t1。
   return (
     <>
       {horizontal
@@ -17,7 +20,7 @@ export default () => {
             onPress={() => { void playPrev() }}
             style={({ pressed }) => [styles.control, pressed ? styles.pressed : null]}
           >
-            <Icon name="prevMusic" size={21} color="#FFFFFF" />
+            <Icon name="prevMusic" size={21} color={TIDE_COLOR.t1} />
           </Pressable>
         : null}
       <Pressable
@@ -26,7 +29,7 @@ export default () => {
         onPress={togglePlay}
         style={({ pressed }) => [styles.control, styles.primary, pressed ? styles.pressed : null]}
       >
-        <Icon name={isPlay ? 'pause' : 'play'} size={24} color="#FFFFFF" />
+        <Icon name={isPlay ? 'pause' : 'play'} size={24} color={TIDE_COLOR.t1} />
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -34,13 +37,13 @@ export default () => {
         onPress={() => { void playNext() }}
         style={({ pressed }) => [styles.control, pressed ? styles.pressed : null]}
       >
-        <Icon name="nextMusic" size={21} color="#FFFFFF" />
+        <Icon name="nextMusic" size={21} color={TIDE_COLOR.t1} />
       </Pressable>
     </>
   )
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyle(() => StyleSheet.create({
   control: {
     width: 44,
     height: 44,
@@ -48,6 +51,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 22,
   },
-  primary: { backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+  primary: { backgroundColor: TIDE_COLOR.fillMid },
   pressed: { opacity: 0.65, transform: [{ scale: 0.94 }] },
-})
+}))

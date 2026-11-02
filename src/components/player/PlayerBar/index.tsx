@@ -11,7 +11,7 @@ import { useSettingValue } from '@/store/setting/hook'
 import { useProgress } from '@/store/player/hook'
 import GlassSurface from '@/components/liquid/GlassSurface'
 import GradientView from '@/components/liquid/GradientView'
-import { useTideGradient } from '@/components/liquid/tide'
+import { useTideColor, useTideGradient } from '@/components/liquid/tide'
 import { PlayerBarOpenContext, usePlayerBarOpen } from './context'
 
 // 顶部细进度线：把「播放到哪了」这个最高频信息提到最短路径上，
@@ -55,6 +55,12 @@ export default memo(({ isHome = false, onOpen }: {
   const { keyboardShown } = useKeyboard()
   const autoHidePlayBar = useSettingValue('common.autoHidePlayBar')
   const fallbackOpen = usePlayerBarOpen()
+  // 只为订阅主题：下面 playerComponent 的 useMemo 缓存了整棵子树，
+  // 依赖里不含主题的话，切主题时 ControlBtn 不会重新执行，
+  // 它读到的 TIDE_COLOR.t1 就一直是切换前那次渲染的颜色
+  // （症状：浅色玻璃上还压着白色图标，等于消失）。
+  // 把 palette 放进依赖数组，主题一变缓存作废，子树重建、颜色重新求值。
+  const palette = useTideColor()
 
   const openAction = useMemo(
     () => ({ open: onOpen ?? fallbackOpen.open }),
@@ -93,7 +99,9 @@ export default memo(({ isHome = false, onOpen }: {
         <ProgressLine />
       </GlassSurface>
     </PlayerBarOpenContext.Provider>
-  ), [isHome, openAction])
+    // palette 不在回调体内出现，但必须在依赖里：它的作用是让缓存随主题失效。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [isHome, openAction, palette])
 
   // console.log('render pb')
 

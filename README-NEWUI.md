@@ -23,7 +23,15 @@
 
 新样式仅在 `liquid_glass` 主题下启用，其他主题保持原样。
 
-### 3. 播放与交互修复
+### 3. 设置页精简（本版重点）
+
+- 删除「软件更新」与「关于 lx-music」两个入口，整个版本模块（`src/core/version.ts`、`src/store/version/`、`VersionModal`）一并移除。
+- 删除首次启动的许可协议弹窗（`PactModal`）：装好直接进发现页，不再有免责声明或「谨防倒卖」提示。
+- 不再出现任何软件更新弹窗 —— 检查更新的调用链已随模块删除一起断掉。
+- 主题设置只保留「液态玻璃（深色）」「液态玻璃（浅色）」两项，去掉无消费点的「字体阴影」开关。
+- 现在顶部只有四个分类：基本设置 / 播放设置 / 主题设置 / 桌面歌词。
+
+### 4. 播放与交互修复
 
 | 问题 | 修复 |
 | --- | --- |
@@ -51,12 +59,24 @@ metro.config.js    强制单份 React / React Native 解析
 ```bash
 npm install
 
-# 手机（arm64）
-cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
-
-# 模拟器（x86_64）
-cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64
+# 一次性产出全 4 个 ABI + universal，并汇总到 dist/
+cd android && ./gradlew assembleRelease copyApksToDist
 ```
+
+`copyApksToDist` 会把 `android/app/build/outputs/apk/release/*.apk` 拷到项目根的 `dist/`，文件名统一为 `lx-music-newui-v<versionName>-<abi>.apk`：
+
+```
+dist/
+  lx-music-newui-v1.9.1-arm64-v8a.apk
+  lx-music-newui-v1.9.1-armeabi-v7a.apk
+  lx-music-newui-v1.9.1-universal.apk
+  lx-music-newui-v1.9.1-x86.apk
+  lx-music-newui-v1.9.1-x86_64.apk
+```
+
+产物名前缀由 `android/app/build.gradle` 里的 `applicationName` 变量控制，与 `package.json` 的 `name` 解耦（后者参与 RN 模块解析，不宜改动）。
+
+> 中文路径会让 Gradle 调 Node 时编码坏掉，建议先 `subst X: <项目路径>` 再从 `X:\android` 构建。
 
 release 构建若在 Metro 文件监听阶段超时，可在构建进程设置 `CI=true` 关闭 watch。
 
@@ -64,9 +84,14 @@ release 构建若在 Metro 文件监听阶段超时，可在构建进程设置 `
 
 ## 已知限制
 
-- 完整 `tsc` 仍有既有类型错误（Timer、SourceSelector 泛型、nullable listId、vendor 示例），与界面改动无关。
+- 完整 `tsc` 仍有 5 处既有类型错误（`timeoutExit`、`plugins/player/hook`、`SourceSelector` 泛型、`store/player/action` nullable listId），与界面改动无关，本轮未新增。
 - 主要在 Android 9 x86_64 模拟器验证；arm64 真机、横屏、全部弹层未逐项回归。
 - 频谱可视化依赖原生 PCM 分流，无音频信号时退化为静态轨道。
+
+## 主题实现的两个坑（改 UI 前必读）
+
+1. `StyleSheet.create()` 在**模块加载那一刻**把颜色求值固化。凡是颜色取自 `TIDE_COLOR` 的样式表，必须用 `createThemedStyle(() => StyleSheet.create({...}))` 包一层 —— 它是 Proxy，读 `styles.xxx` 时按当前明暗决定是否重建。
+2. `TIDE_COLOR` 也是 Proxy，「值正确」不等于「组件会重渲染」。被 `memo` 包住且不调 `useTheme()` / `useTideColor()` 的组件不在 context 订阅名单里，切主题时停在旧颜色上。这类组件用 `themedMemo` 包；如果 JSX 子树被 `useMemo` 缓存（如 `PlayerBar`），还必须把调色板放进依赖数组，否则缓存不失效。
 
 ## 许可
 

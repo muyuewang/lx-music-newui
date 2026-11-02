@@ -100,7 +100,10 @@ def getNpmPackageJson() {
 def npmPackageJson = getNpmPackageJson()
 def verCode = npmPackageJson["versionCode"]
 def verName = npmPackageJson["version"]
-def applicationName = npmPackageJson["name"]
+// 产物文件名固定用 lx-music-newui，不再取 package.json 的 name。
+// package.json 的 name 参与 React Native 模块解析，改成别的会连带影响
+// 原生侧的包名注册，所以这里只改「输出文件叫什么」，不动构建标识。
+def applicationName = "lx-music-newui"
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -208,3 +211,33 @@ dependencies {
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+
+/**
+ * 把 release 的五个 ABI 产物汇总到项目根目录的 dist/。
+ *
+ * 为什么要这一步：assembleRelease 会把 APK 分散写在
+ * android/app/build/outputs/apk/release/ 下，文件名带 ABI 后缀，
+ * 但发布时需要的是「一个目录里整齐放着全部安装包」。
+ * 手动 cp 容易漏（比如忘了 universal），所以固化成任务。
+ *
+ * 用法：./gradlew assembleRelease copyApksToDist
+ */
+tasks.register("copyApksToDist", Copy) {
+    group = "distribution"
+    description = "Copy release APKs to <project>/dist"
+    // 必须在 assembleRelease 之后跑：一起写进命令行时 Gradle 不保证顺序，
+    // 若先执行本任务，outputs 目录还是空的，会被判定成 NO-SOURCE 直接跳过。
+    mustRunAfter "assembleRelease"
+    // 放在 android/app 下，所以项目根是 ../../..
+    def distDir = new File(project.rootProject.projectDir.parentFile, "dist")
+    from("${buildDir}/outputs/apk/release") {
+        include "*.apk"
+    }
+    into distDir
+    doLast {
+        println "APKs copied to: ${distDir.absolutePath}"
+        distDir.listFiles()?.findAll { it.name.endsWith(".apk") }?.sort { it.name }?.each {
+            println "  ${it.name}  ${(it.length() / 1024 / 1024).round(2)} MB"
+        }
+    }
+}

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Platform,
@@ -25,8 +25,10 @@ import {
   TIDE_TYPE,
   createThemedStyle,
   useTideGradient,
+  themedMemo,
 } from '@/components/liquid/tide'
 import { useReadableText } from '@/components/liquid/useReadableText'
+import { useTheme } from '@/store/theme/hook'
 import { MUSIC_TOGGLE_MODE, LIST_IDS } from '@/config/constant'
 import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting, getPrevTab, setActiveTab } from '@/core/common'
@@ -56,7 +58,7 @@ const ICON = {
 //
 // 进度条本体换成液态玻璃的频谱条：轨道随音乐能量动态形变，
 // 拖动时整个玻璃控件按压缩放（物理反馈）。
-const TrackProgress = memo(() => {
+const TrackProgress = themedMemo(() => {
   const { progress, maxPlayTime, nowPlayTimeStr } = useProgress()
 
   const remainStr = useMemo(() => {
@@ -89,7 +91,7 @@ const TrackProgress = memo(() => {
 
 // 歌词行：当前行白色加粗，其余压到半透明白。
 // 单独 memo 是为了让高频的进度更新只重渲染真正换行的那两行。
-const LyricLine = memo(({ text, active }: { text: string, active: boolean }) => (
+const LyricLine = themedMemo(({ text, active }: { text: string, active: boolean }) => (
   <View style={styles.lyricLine}>
     <Text
       size={active ? 16 : 14}
@@ -102,7 +104,7 @@ const LyricLine = memo(({ text, active }: { text: string, active: boolean }) => 
   </View>
 ))
 
-const LyricView = memo(() => {
+const LyricView = themedMemo(() => {
   const t = useI18n()
   const lines = useLrcSet()
   const { line } = useLrcPlay()
@@ -119,7 +121,7 @@ const LyricView = memo(() => {
   if (!lines.length) {
     return (
       <View style={styles.lyricEmpty}>
-        <Text size={13} color="rgba(255, 255, 255, 0.38)" style={styles.lyricEmptyText}>{t('music_no_lyric')}</Text>
+        <Text size={13} color={TIDE_COLOR.t3} style={styles.lyricEmptyText}>{t('music_no_lyric')}</Text>
       </View>
     )
   }
@@ -138,7 +140,7 @@ const LyricView = memo(() => {
   )
 })
 
-const SideBtn = memo(({ icon, size, onPress, active, diameter = 46 }: {
+const SideBtn = themedMemo(({ icon, size, onPress, active, diameter = 46 }: {
   icon: string
   size: number
   onPress?: () => void
@@ -175,7 +177,7 @@ const SideBtn = memo(({ icon, size, onPress, active, diameter = 46 }: {
  * 所以拆成两个独立入口、共用同一份设置：开随机就是关循环，反之亦然，
  * 免得出现「随机 + 列表循环」这种自相矛盾的状态。
  */
-const RandomBtn = memo(({ diameter }: { diameter: number }) => {
+const RandomBtn = themedMemo(({ diameter }: { diameter: number }) => {
   const t = useI18n()
   const playMethod = useSettingValue('player.togglePlayMethod')
   const active = playMethod === MUSIC_TOGGLE_MODE.random
@@ -201,7 +203,7 @@ const LOOP_CYCLE = [
   MUSIC_TOGGLE_MODE.list,
 ] as const
 
-const LoopBtn = memo(({ diameter }: { diameter: number }) => {
+const LoopBtn = themedMemo(({ diameter }: { diameter: number }) => {
   const t = useI18n()
   const playMethod = useSettingValue('player.togglePlayMethod')
 
@@ -230,7 +232,7 @@ const LoopBtn = memo(({ diameter }: { diameter: number }) => {
   return <SideBtn icon={state.icon} size={20} onPress={handlePress} active={state.active} diameter={diameter} />
 })
 
-const PlayBtn = memo(({ isPlay, onPress, diameter }: {
+const PlayBtn = themedMemo(({ isPlay, onPress, diameter }: {
   isPlay: boolean
   onPress: () => void
   diameter: number
@@ -299,7 +301,7 @@ const useLoveState = (musicId: string | null | undefined) => {
   return isLove
 }
 
-const MetaChips = memo(({ color }: { color: string }) => {
+const MetaChips = themedMemo(({ color }: { color: string }) => {
   const t = useI18n()
   const playMusicInfo = usePlayMusicInfo()
   const raw = playMusicInfo.musicInfo as LX.Music.MusicInfo
@@ -336,7 +338,7 @@ const MetaChips = memo(({ color }: { color: string }) => {
 })
 
 /** 音量拖动直接控制播放器，结束后保存并与设置页同步。 */
-const VolumeRow = memo(() => {
+const VolumeRow = themedMemo(() => {
   const volume = useSettingValue('player.volume')
 
   const handleChange = useCallback((v: number) => {
@@ -365,12 +367,17 @@ const VolumeRow = memo(() => {
   )
 })
 
-export default memo(() => {
+export default themedMemo(() => {
   const t = useI18n()
   const statusBarHeight = useStatusbarHeight()
   const musicInfo = usePlayerMusicInfo()
   const isPlay = useIsPlay()
   const { width, height } = useWindowDimensions()
+  // 播放页背景与控件 overlay 必须按明暗分两套。
+  // 原来无论主题一律 blurType="dark" + 两层深色压暗，
+  // 切到浅色液态玻璃后整页变成深黑底，而此时的文字已跟随浅色调色板
+  // 变成深墨色 —— 深字压深底，歌词、歌名、时间全部读不出来。
+  const isDark = useTheme().isDark
   const sideDiameter = Math.min(46, (width - 44) * 0.16)
   const playDiameter = Math.min(scaleSizeW(68), (width - 44) * 0.24)
   // 玻璃上的文字颜色按当前玻璃底色动态挑选，保证对比度 ≥ 4.5:1
@@ -426,11 +433,13 @@ export default memo(() => {
           />
           <BlurView
             style={StyleSheet.absoluteFill}
-            blurType="dark"
+            blurType={isDark ? 'dark' : 'xlight'}
             blurAmount={26}
-            overlayColor="rgba(0, 0, 0, 0.20)"
+            overlayColor={isDark ? 'rgba(0, 0, 0, 0.20)' : 'rgba(255, 255, 255, 0.20)'}
           />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(5, 6, 10, 0.46)' }]} />
+          <View style={[StyleSheet.absoluteFill, {
+            backgroundColor: isDark ? 'rgba(5, 6, 10, 0.46)' : 'rgba(238, 241, 247, 0.62)',
+          }]} />
         </View>
       )}
 
@@ -548,8 +557,8 @@ export default memo(() => {
           )
         : (
             <View style={styles.empty}>
-              <Icon name="play-outline" size={44} color="rgba(255, 255, 255, 0.5)" />
-              <Text size={13} color="rgba(255, 255, 255, 0.55)" style={styles.emptyText}>{t('music_no_music')}</Text>
+              <Icon name="play-outline" size={44} color={TIDE_COLOR.t3} />
+              <Text size={13} color={TIDE_COLOR.t2} style={styles.emptyText}>{t('music_no_music')}</Text>
             </View>
           )}
     </View>
@@ -601,14 +610,14 @@ const styles = createThemedStyle(() => (StyleSheet.create({
   // 参考图封面是接近正方形、上下略扁的大圆角图，圆角由组件按比例给定。
   // 宽高 / 圆角在组件里用 coverSize 直接写死，这里只保留兜底底色
   cover: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: TIDE_COLOR.fillMid,
   },
   coverEdge: {
     position: 'absolute',
     top: 0,
     left: 0,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: TIDE_COLOR.edge,
   },
   metaRow: {
     flexDirection: 'row',

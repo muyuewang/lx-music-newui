@@ -175,8 +175,8 @@ const styles = createThemedStyle(() => (createStyle({
     paddingTop: 7,
     paddingBottom: 7,
     borderRadius: TIDE_RADIUS.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: TIDE_COLOR.fillTop,
     borderWidth: 1,
-    borderColor: 'rgba(121, 230, 255, 0.35)',
+    borderColor: TIDE_COLOR.a2,
   },
 })))

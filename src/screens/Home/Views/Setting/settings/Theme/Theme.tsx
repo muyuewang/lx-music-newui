@@ -19,10 +19,11 @@ const useActive = (id: string) => {
   return isActive
 }
 
-// 默认只铺开 3 套精选主题，其余收进「更多主题」。
-// 17 套一次摊开会造成选择过载，且大多数主题只有配色差异，用户并不需要逐个比对。
-// 顺序即展示顺序：液态玻璃（默认）/ 黑灯瞎火（唯一深色备选）/ 绿意盎然（浅色最常用）
-const FEATURED_THEME_IDS = ['liquid_glass', 'black', 'green']
+// 当前内置主题只剩两套液态玻璃（深色 / 浅色），所以这里就是全部，
+// 不再需要「更多主题」折叠。原列表里的 black / green 已随主题精简一并删除，
+// 继续留着会让折叠态按 id 过滤出空数组 —— 主题页打开是一片空白。
+// 顺序即展示顺序：深色在前（默认）。
+const FEATURED_THEME_IDS = ['liquid_glass', 'liquid_glass_light']
 
 const ThemeItem = ({ id, name, color, image, setTheme }: {
   id: string
@@ -37,7 +38,7 @@ const ThemeItem = ({ id, name, color, image, setTheme }: {
   // 是否显示由父级 displayThemes 统一过滤，这里不再自行判断：
   // 原实现在此处又判了一次 showAll，折叠态下非当前选中的主题会被一并滤掉
   return (
-    <TouchableOpacity style={{ ...styles.item, width: scaleSizeH(ITEM_HEIGHT) }} activeOpacity={0.5} onPress={() => { setTheme(id) }}>
+    <TouchableOpacity style={styles.item} activeOpacity={0.5} onPress={() => { setTheme(id) }}>
       <View style={{ ...styles.colorContent, width: scaleSizeH(COLOR_ITEM_HEIGHT), borderColor: isActive ? color : 'transparent' }}>
         {
           image
@@ -115,6 +116,12 @@ export default memo(() => {
     return picked.slice().sort((a, b) => rank(a.id) - rank(b.id))
   }, [themeInfo.themes, showAll, activeThemeId])
 
+  // 只有「存在不在精选列表里的主题」时，「更多主题」才有意义。
+  // 内置主题精简到两套液态玻璃之后，两套都在精选列表内，
+  // 展开前后的 displayThemes 完全一致 —— 那个按钮点下去画面毫无变化，
+  // 是个纯噪声控件。这里按实际数量决定是否渲染。
+  const hasMoreThemes = themeInfo.themes.length > FEATURED_THEME_IDS.length
+
   return (
     <SubTitle title={t('setting_basic_theme')}>
       <View style={styles.list}>
@@ -140,15 +147,19 @@ export default memo(() => {
               setTheme={setThemeId} />
           })
         }
-        <MoreBtn expanded={showAll} onToggle={() => { setShowAll(!showAll) }} />
+        {hasMoreThemes ? <MoreBtn expanded={showAll} onToggle={() => { setShowAll(!showAll) }} /> : null}
       </View>
     </SubTitle>
   )
 })
 
-const ITEM_HEIGHT = 62
 const COLOR_ITEM_HEIGHT = 36
 const IMAGE_HEIGHT = 29
+// 主题项宽度改为由名称文字撑开，不再写死 62：
+// 文案从「液态玻璃」变成「液态玻璃（深色）」后，62pt 装不下，
+// numberOfLines={1} 会把名字压成「液态玻…」，两种液态玻璃看起来一模一样。
+// 「液态玻璃（深色）」8 个字符 × 12pt ≈ 96，留到 104 不换行。
+const NAME_WIDTH = 104
 const styles = createStyle({
   list: {
     flexDirection: 'row',
@@ -161,6 +172,7 @@ const styles = createStyle({
     alignItems: 'center',
     // marginTop: 5,
     // backgroundColor: 'rgba(0,0,0,0.2)',
+    width: NAME_WIDTH,
   },
   colorContent: {
     height: COLOR_ITEM_HEIGHT,

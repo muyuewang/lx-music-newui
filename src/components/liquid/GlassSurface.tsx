@@ -3,8 +3,10 @@ import { Platform, requireNativeComponent, StyleSheet, View, type StyleProp, typ
 import NativeGlassBlur from './NativeGlassBlur'
 import {
   GLASS_AMBIENT_ALPHA, GLASS_BASE_ALPHA, GLASS_BLUR_RADIUS,
-  GLASS_DOWNSAMPLE_FACTOR, GLASS_ELEVATION, GLASS_OVERLAY_COLOR,
-  GLASS_SATURATION, GLASS_SCRIM_COLOR, GLASS_SHADOW_OPACITY,
+  GLASS_DOWNSAMPLE_FACTOR, GLASS_ELEVATION,
+  GLASS_OVERLAY_COLOR, GLASS_OVERLAY_COLOR_LIGHT,
+  GLASS_SATURATION, GLASS_SCRIM_COLOR, GLASS_SCRIM_COLOR_LIGHT,
+  GLASS_SHADOW_OPACITY,
   GLASS_SHADOW_RADIUS, SHADOW_RADIUS_SCALE,
 } from './designTokens'
 import { useLiquidTint } from './useLiquidTint'
@@ -48,7 +50,9 @@ export default memo(({
   downsampleFactor = GLASS_DOWNSAMPLE_FACTOR,
   blur = true,
   blurType = 'light',
-  overlayColor = GLASS_OVERLAY_COLOR,
+  // 不能在参数默认值里写 GLASS_OVERLAY_COLOR：那样 overlayColor 永远非空，
+  // 下面的明暗分支走不到，浅色主题会一直用在白底上等于没画的白雾。
+  overlayColor,
   radius = 0,
   topRadius,
   bottomRadius,
@@ -66,14 +70,26 @@ export default memo(({
 }: Props) => {
   const Surface = blur ? NativeSurface : View
   const { glassColor, ambientColor, accentDeepColor } = useLiquidTint(tint, saturation)
-  const scrimColor = scrim ?? (blur ? GLASS_SCRIM_COLOR : undefined)
+  const isDark = useTheme().isDark
+
+  // 材质必须按明暗分两套，不能共用一个常量。
+  //
+  // 深色主题：近黑 scrim（0.22）把白雾压住，玻璃比背景略亮但不刺眼；
+  // 浅色主题：同一层近黑 scrim 会把每块玻璃压成深灰实色块 ——
+  // 实测截图里卡片、圆形入口、迷你播放条全变成近黑方块，
+  // 而卡片内文字此时已跟随浅色调色板变深墨，深字压深底再次读不出来。
+  // 浅色改用高不透明度纯白做底（玻璃要比背景更亮才浮得起来），
+  // 边界交给下面 edgeStyle 的暗描边定义。
+  const scrimColor = useMemo(() => (scrim ?? (blur
+    ? (isDark ? GLASS_SCRIM_COLOR : GLASS_SCRIM_COLOR_LIGHT)
+    : undefined)), [scrim, blur, isDark])
+  const resolvedOverlay = overlayColor ?? (isDark ? GLASS_OVERLAY_COLOR : GLASS_OVERLAY_COLOR_LIGHT)
   // 描边必须随明暗反转。
   //
   // 深色主题的玻璃靠「白色内描边」从近黑背景里浮起来；
   // 同样的白描边压在浅色冷白底上等于没画 —— 面板会失去边界，
   // 整片 UI 变成一坨没有分层的白块，这正是「浅色不像液态玻璃」的主因。
   // 浅色主题改用「暗描边 + 更亮的顶部高光」：边界由暗线定义，受光感由高光定义。
-  const isDark = useTheme().isDark
   const edgeStyle = useMemo(() => (isDark
     ? {
         borderColor: 'rgba(255, 255, 255, 0.10)',
@@ -125,7 +141,7 @@ export default memo(({
               blurType={blurType}
               blurRadius={blurRadius}
               downsample={downsampleFactor}
-              overlayColor={overlayColor}
+              overlayColor={resolvedOverlay}
             />
           : null}
         {scrimColor != null

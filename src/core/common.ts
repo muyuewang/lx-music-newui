@@ -13,7 +13,6 @@ import { storageDataPrefix } from '@/config/constant'
 import { saveData } from '@/plugins/storage'
 import { throttle } from '@/utils/common'
 import { getSelectedManagedFolder, saveFontSize, saveViewPrevState, setSelectedManagedFolder } from '@/utils/data'
-import { showPactModal as handleShowPactModal } from '@/navigation'
 import { hideDesktopLyricView } from '@/utils/nativeModules/lyricDesktop'
 import { getPersistedUriList, selectManagedFolder } from '@/utils/fs'
 
@@ -109,10 +108,6 @@ export const setActiveTab = (tab: Parameters<typeof commonActions.setActiveTab>[
  * 历史由 store 层的 setActiveTab 统一记录，任何调用方都会留下痕迹。
  */
 export const getPrevTab = (): TabId => commonState.prevTab ?? 'discover'
-
-export const showPactModal = () => {
-  handleShowPactModal()
-}
 
 export const checkStoragePermissions = async() => {
   const selectedManagedFolder = await getSelectedManagedFolder()

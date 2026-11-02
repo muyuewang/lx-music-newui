@@ -3,7 +3,7 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
 import LiquidButton from './LiquidButton'
-import { TIDE_COLOR } from './tide'
+import { useTideColor } from './tide'
 
 interface Props {
   icon: string
@@ -31,26 +31,34 @@ export default memo(({
   iconSize = 18,
   size = 40,
   variant = 'soft',
-  color = TIDE_COLOR.t1,
+  color,
   tint,
   style,
-}: Props) => (
-  <LiquidButton
-    radius={999}
-    onPress={onPress}
-    tint={tint}
-    tintAlpha={variant === 'deep' ? 0.30 : 0.10}
-    saturationAlpha={variant === 'deep' ? 0.16 : 0.08}
-    overlayColor={variant === 'deep' ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)'}
-    edge
-    topHighlight
-    hitSlop={6}
-    style={style}
-    contentStyle={[styles.content, { width: size, height: size, borderRadius: size / 2 }]}
-  >
-    <Icon name={icon} size={iconSize} color={color} />
-  </LiquidButton>
-))
+}: Props) => {
+  // 同 GlassChip：不能把 TIDE_COLOR.t1 当参数默认值。
+  // 本组件是 memo 的，切主题时父级不会重新调用它，
+  // 参数默认值也就不会重新求值 —— 图标会一直保持切换前的颜色。
+  const palette = useTideColor()
+  const resolvedColor = color ?? palette.t1
+
+  return (
+    <LiquidButton
+      radius={999}
+      onPress={onPress}
+      tint={tint}
+      tintAlpha={variant === 'deep' ? 0.30 : 0.10}
+      saturationAlpha={variant === 'deep' ? 0.16 : 0.08}
+      overlayColor={variant === 'deep' ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)'}
+      edge
+      topHighlight
+      hitSlop={6}
+      style={style}
+      contentStyle={[styles.content, { width: size, height: size, borderRadius: size / 2 }]}
+    >
+      <Icon name={icon} size={iconSize} color={resolvedColor} />
+    </LiquidButton>
+  )
+})
 
 const styles = StyleSheet.create({
   content: {

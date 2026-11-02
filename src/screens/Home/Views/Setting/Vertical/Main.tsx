@@ -8,9 +8,8 @@ import Search from '../settings/Search'
 import List from '../settings/List'
 import Sync from '../settings/Sync'
 import Backup from '../settings/Backup'
+import Theme from '../settings/Theme'
 import Other from '../settings/Other'
-import Version from '../settings/Version'
-import About from '../settings/About'
 import { createStyle } from '@/utils/tools'
 import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
 import { SETTING_SCREENS, type SettingScreenIds } from '../Main'
@@ -49,14 +48,13 @@ const ListItem = memo(({
 }: { id: SettingScreenIds }) => {
   switch (id) {
     case 'player': return <Player />
+    case 'theme': return <Theme />
     case 'lyric_desktop': return <LyricDesktop />
     case 'search': return <Search />
     case 'list': return <List />
     case 'sync': return <Sync />
     case 'backup': return <Backup />
     case 'other': return <Other />
-    case 'version': return <Version />
-    case 'about': return <About />
     case 'basic': return <Basic />
   }
 }, () => true)

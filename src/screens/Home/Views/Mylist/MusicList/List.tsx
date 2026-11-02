@@ -18,6 +18,7 @@ import { Icon } from '@/components/common/Icon'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
+import { TIDE_COLOR } from '@/components/liquid/tide'
 
 type FlatListType = FlatListProps<LX.Music.MusicInfo>
 
@@ -276,8 +277,8 @@ const List = forwardRef<ListType, ListProps>(({ onShowMenu, onMuiltSelectMode, o
   // 用户点进「试听列表」看到全黑，无法区分「加载中」「没有歌」还是「界面坏了」。
   const renderEmpty = () => (
     <View style={styles.empty}>
-      <Icon name="album" size={40} color="rgba(255, 255, 255, 0.22)" />
-      <Text size={13} color="rgba(255, 255, 255, 0.42)" style={styles.emptyText}>
+      <Icon name="album" size={40} color={TIDE_COLOR.t3} />
+      <Text size={13} color={TIDE_COLOR.t2} style={styles.emptyText}>
         {t('list_empty_tip')}
       </Text>
     </View>

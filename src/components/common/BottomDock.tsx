@@ -1,4 +1,4 @@
-﻿import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Dimensions, Easing, StyleSheet, TouchableOpacity, View, type LayoutChangeEvent } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
@@ -9,7 +9,8 @@ import { setActiveTab } from '@/core/common'
 import { TAB_IDS, type TabId } from '@/store/common/state'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import GlassSurface from '@/components/liquid/GlassSurface'
-import { TIDE_COLOR, TIDE_RADIUS } from '@/components/liquid/tide'
+import { TIDE_RADIUS, useTideColor } from '@/components/liquid/tide'
+import { useTheme } from '@/store/theme/hook'
 
 // 底部系统导航栏高度。项目没有装 react-native-safe-area-context，
 // 用它来算需要多引一个原生依赖，不值得。
@@ -71,6 +72,11 @@ const DockItem = memo(({ id, active, onPress }: {
   onPress: (id: TabId) => void
 }) => {
   const t = useI18n()
+  // 必须订阅主题：下面的颜色虽然来自 TIDE_COLOR（运行时 Proxy），
+  // 但本组件不读 useTheme() 的话，切主题时不会重渲染，
+  // 会一直停留在上一次渲染时取到的旧色 —— 浅色主题下底部三个标签
+  // 会保持深色主题的白字，压在浅底上等于看不见。
+  const palette = useTideColor()
 
   return (
     <TouchableOpacity
@@ -81,10 +87,13 @@ const DockItem = memo(({ id, active, onPress }: {
       activeOpacity={0.74}
       onPress={() => { onPress(id) }}
     >
-      <Icon name={TAB_ICONS[id]} size={21} color={active ? '#FFFFFF' : 'rgba(255, 255, 255, 0.58)'} />
+      {/* 原来这里硬编码 #FFFFFF / rgba(255,255,255,.58)：
+          深色玻璃上没问题，切到浅色玻璃后白图标压白底直接消失。
+          改用令牌后，深色=白、浅色=深墨，两侧都能读。 */}
+      <Icon name={TAB_ICONS[id]} size={21} color={active ? palette.t1 : palette.t3} />
       <Text
         size={11}
-        color={active ? '#FFFFFF' : TIDE_COLOR.t2}
+        color={active ? palette.t1 : palette.t3}
         numberOfLines={1}
         style={[styles.label, active ? styles.labelActive : undefined]}
       >
@@ -96,10 +105,25 @@ const DockItem = memo(({ id, active, onPress }: {
 
 export default memo(() => {
   const activeTab = useActiveTab()
+  const isDark = useTheme().isDark
   const bottomInset = getBottomInset()
   const [rowWidth, setRowWidth] = useState(0)
   const slide = useRef(new Animated.Value(TAB_IDS.indexOf(activeTab))).current
   const itemWidth = rowWidth / TAB_IDS.length
+
+  // 选中胶囊也要随明暗反转。
+  // 深色玻璃上「选中」= 加一层白雾（比底色更亮）；
+  // 浅色玻璃上同样加白雾等于什么都没画（底本来就近白）——
+  // 必须换成一层极淡的墨色，才能让选中项从同色底色里浮出来。
+  const selectionStyle = useMemo(() => (isDark
+    ? {
+        backgroundColor: 'rgba(255, 255, 255, 0.10)',
+        borderColor: 'rgba(255, 255, 255, 0.14)',
+      }
+    : {
+        backgroundColor: 'rgba(14, 17, 27, 0.06)',
+        borderColor: 'rgba(14, 17, 27, 0.10)',
+      }), [isDark])
 
   useEffect(() => {
     const animation = Animated.timing(slide, {
@@ -143,12 +167,14 @@ export default memo(() => {
           {itemWidth > 0
             ? <Animated.View
                 pointerEvents="none"
-                style={[styles.selection, {
+                style={[styles.selection, selectionStyle, {
                   width: Math.max(0, itemWidth - 8),
-                  transform: [{ translateX: slide.interpolate({
-                    inputRange: [0, 1, 2],
-                    outputRange: [4, itemWidth + 4, itemWidth * 2 + 4],
-                  }) }],
+                  transform: [{
+                    translateX: slide.interpolate({
+                      inputRange: [0, 1, 2],
+                      outputRange: [4, itemWidth + 4, itemWidth * 2 + 4],
+                    }),
+                  }],
                 }]}
               />
             : null}
@@ -194,9 +220,9 @@ const styles = StyleSheet.create({
     top: 6,
     bottom: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+    // 底色与描边由组件内按明暗内联给出（见 selectionStyle），
+    // 这里写死会盖掉浅色分支。
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
   },
   label: { marginTop: 3 },
   item: {

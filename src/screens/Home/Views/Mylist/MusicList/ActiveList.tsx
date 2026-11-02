@@ -125,8 +125,8 @@ const styles = createThemedStyle(() => (createStyle({
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: TIDE_COLOR.fillTop,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: TIDE_COLOR.edgeSoft,
   },
 })))

@@ -1,4 +1,4 @@
-import { initSetting, showPactModal, updateSetting } from '@/core/common'
+import { initSetting, updateSetting } from '@/core/common'
 import registerPlaybackService from '@/plugins/player/service'
 import initTheme from './theme'
 import initI18n from './i18n'
@@ -11,24 +11,21 @@ import { initDeeplink } from './deeplink'
 import { setApiSource } from '@/core/apiSource'
 import { resolveStartupApiSource } from './builtinSource'
 import commonActions from '@/store/common/action'
-import settingState from '@/store/setting/state'
-import { checkUpdate } from '@/core/version'
 import { bootLog } from '@/utils/bootLog'
-import { cheatTip } from '@/utils/tools'
 
+// 启动首屏回调。
+//
+// 这里刻意**不再**弹任何东西：
+// - 原来的「谨防被骗提示」（cheatTip）和「许可协议」（PactModal）都是
+//   首次启动强制打断用户的弹窗，一次点掉两个，体验很差；
+// - 原来的 checkUpdate() 会在启动时联网查版本，查到就弹更新窗，
+//   而这个构建不对外发布、更新渠道也不可用，弹出来只会误导。
+// 现在首屏只做 deeplink 初始化，静默进入主界面。
 let isFirstPush = true
-const handlePushedHomeScreen = async() => {
-  await cheatTip()
-  if (settingState.setting['common.isAgreePact']) {
-    if (isFirstPush) {
-      isFirstPush = false
-      void checkUpdate()
-      void initDeeplink()
-    }
-  } else {
-    if (isFirstPush) isFirstPush = false
-    showPactModal()
-  }
+const handlePushedHomeScreen = () => {
+  if (!isFirstPush) return
+  isFirstPush = false
+  void initDeeplink()
 }
 
 let isInited = false

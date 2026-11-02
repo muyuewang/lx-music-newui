@@ -1,6 +1,7 @@
-import { memo, type PropsWithChildren } from 'react'
+import { type PropsWithChildren } from 'react'
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import GlassBackground from './GlassBackground'
+import { themedMemo } from '@/components/liquid/tide'
 
 interface Props extends PropsWithChildren {
   style?: StyleProp<ViewStyle>
@@ -20,7 +21,7 @@ interface Props extends PropsWithChildren {
  * tint 固定用低 alpha 的白色，不跟随主题色：参考图的玻璃是中性偏冷的白，
  * 让它叠在任何背景（深蓝光斑 / 浅色主题）上都能保持一致的玻璃观感。
  */
-export default memo(({
+export default themedMemo(({
   style,
   radius = 22,
   blurAmount = 18,

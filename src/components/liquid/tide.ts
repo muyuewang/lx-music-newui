@@ -11,7 +11,7 @@
  * 2. 圆角只用 14 / 18 / 28 / 999 四档，间距只用 20 / 24 / 8 三档。
  *    所有页面从这两个表取值，避免又出现 12、16、20 混用的散值。
  */
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import type { TextStyle } from 'react-native'
 
 import { setSpText } from '@/utils/pixelRatio'
@@ -283,6 +283,40 @@ export const createThemedStyle = <T extends object>(factory: () => T): T => {
 export const useTideGradient = (): readonly string[] => {
   const c = useTideColor()
   return useMemo(() => [c.a1, c.a2] as const, [c])
+}
+
+/**
+ * 带主题订阅的 `memo` —— 用于「渲染 TIDE_COLOR 但不读 useTheme」的组件。
+ *
+ * 背景：`TIDE_COLOR` 是 Proxy，每次读取都返回当前调色板的正确值。
+ * 但「值正确」不等于「组件会重渲染」—— React 只会在 context 变化时
+ * 通知**订阅了该 context** 的组件。被 `memo` 包住、又不调 useTheme()
+ * 的组件不在订阅名单里，切主题时不会重新执行，于是把切换前那一次渲染
+ * 取到的颜色一直留在屏幕上。
+ *
+ * 典型症状：切到浅色液态玻璃后，底部导航的三个标签、
+ * 「我的 → 设置」顶部的大标题、首页卡片标题全部变成白字压白底 ——
+ * 肉眼看起来就是「内容整块消失」，但布局其实完全正常。
+ *
+ * 这个包装器把订阅补齐：内层组件照旧写，外层强制读一次 useTideColor()。
+ * 它只是订阅，不消费返回值 —— 真正的颜色仍由内层从 TIDE_COLOR 取。
+ *
+ * 用法：把 `memo(Foo)` 换成 `themedMemo(Foo)` 即可，其余一行不改。
+ */
+export const themedMemo = <P extends object = Record<string, never>>(
+  component: (props: P) => React.ReactElement | null,
+): React.MemoExoticComponent<(props: P) => React.ReactElement | null> => {
+  const Wrapped = (props: P) => {
+    // 只为订阅：context 一变，本组件必然重渲染，内层随之重渲染。
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useTideColor()
+    return component(props)
+  }
+  // 函数组件本身没有 displayName 字段（那是给 memo/forwardRef 返回的对象用的），
+  // 想继承名字只能读只读的 name，赋给 wrapped 上的 displayName 便于调试树定位。
+  const named = component as { displayName?: string, name?: string }
+  Wrapped.displayName = named.displayName ?? named.name
+  return memo(Wrapped)
 }
 
 /** 圆角阶梯（SPEC §5）：小图 14、卡片 18、大容器 28、胶囊 999。 */

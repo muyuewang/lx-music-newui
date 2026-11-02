@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
@@ -14,6 +14,8 @@ import {
   TIDE_SPACE,
   TIDE_TYPE,
   useTideGradient,
+  themedMemo,
+  createThemedStyle,
 } from '@/components/liquid/tide'
 import { useStatusbarHeight } from '@/store/common/hook'
 import { useMyList } from '@/store/list/hook'
@@ -37,7 +39,7 @@ type SubView = 'home' | 'search' | 'songlist' | 'top'
  * 全屏只出现一次（Hero 的播放键）——SPEC §3.2 规定品牌渐变一屏最多三处，
  * 首页把额度留给「播放」这一个动作。
  */
-const GradientPlayButton = memo(({ size = 46, onPress }: { size?: number, onPress: () => void }) => {
+const GradientPlayButton = themedMemo(({ size = 46, onPress }: { size?: number, onPress: () => void }) => {
   const gradient = useTideGradient()
   return (
     <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [{ opacity: pressed ? 0.86 : 1 }]}>
@@ -54,7 +56,7 @@ const GradientPlayButton = memo(({ size = 46, onPress }: { size?: number, onPres
 })
 
 /** 四宫格入口：中性底色图标与下方文字。 */
-const Entry = memo(({ icon, label, onPress }: {
+const Entry = themedMemo(({ icon, label, onPress }: {
   icon: string
   label: string
   onPress: () => void
@@ -81,7 +83,7 @@ const Entry = memo(({ icon, label, onPress }: {
  * （标签 → 标题 → 元信息 → 渐变播放键）。
  * 卡片本身可点（整卡 = 播放），右下角圆钮是它的视觉焦点。
  */
-const HeroCard = memo(({ picUrl, onPlay }: { picUrl?: string | null, onPlay: () => void }) => {
+const HeroCard = themedMemo(({ picUrl, onPlay }: { picUrl?: string | null, onPlay: () => void }) => {
   const t = useI18n()
 
   return (
@@ -121,7 +123,7 @@ const HeroCard = memo(({ picUrl, onPlay }: { picUrl?: string | null, onPlay: () 
   )
 })
 
-const SectionHeader = memo(({ title, actionText, onAction }: {
+const SectionHeader = themedMemo(({ title, actionText, onAction }: {
   title: string
   actionText?: string
   onAction?: () => void
@@ -151,7 +153,7 @@ const SectionHeader = memo(({ title, actionText, onAction }: {
  * 横滑歌单卡：圆角封面或中性占位。
  * picUrl 取该列表里第一首带封面的歌作为视觉代表。
  */
-const PlaylistCard = memo(({ name, count, picUrl, onPress }: {
+const PlaylistCard = themedMemo(({ name, count, picUrl, onPress }: {
   name: string
   count?: number
   picUrl?: string | null
@@ -167,7 +169,7 @@ const PlaylistCard = memo(({ name, count, picUrl, onPress }: {
               style={styles.cardCoverImg}
               resizeMode="cover"
             />
-          : <Icon name="album" size={26} color="rgba(255, 255, 255, 0.52)" />}
+          : <Icon name="album" size={26} color={TIDE_COLOR.t3} />}
       </View>
       <Text
         size={TIDE_TYPE.body.size}
@@ -189,7 +191,7 @@ const PlaylistCard = memo(({ name, count, picUrl, onPress }: {
 })
 
 /** 最近播放行：封面、曲目信息与无底播放图标。 */
-const RecentRow = memo(({ item, onPress }: {
+const RecentRow = themedMemo(({ item, onPress }: {
   item: LX.Music.MusicInfo
   onPress: () => void
 }) => (
@@ -215,13 +217,13 @@ const RecentRow = memo(({ item, onPress }: {
         </Text>
       </View>
       <View style={styles.recentPlay}>
-        <Icon name="play" size={12} color="rgba(255, 255, 255, 0.82)" />
+        <Icon name="play" size={12} color={TIDE_COLOR.t2} />
       </View>
     </View>
   </TouchableOpacity>
 ))
 
-const HomeView = memo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
+const HomeView = themedMemo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
   const t = useI18n()
   const statusBarHeight = useStatusbarHeight()
   const lists = useMyList()
@@ -377,7 +379,7 @@ const HomeView = memo(({ onOpen }: { onOpen: (v: SubView) => void }) => {
   )
 })
 
-const SubHeader = memo(({ title, onBack }: { title: string, onBack: () => void }) => {
+const SubHeader = themedMemo(({ title, onBack }: { title: string, onBack: () => void }) => {
   const statusBarHeight = useStatusbarHeight()
 
   return (
@@ -397,7 +399,7 @@ const SubHeader = memo(({ title, onBack }: { title: string, onBack: () => void }
   )
 })
 
-export default memo(() => {
+export default themedMemo(() => {
   const t = useI18n()
   const [view, setView] = useState<SubView>('home')
 
@@ -452,7 +454,10 @@ export default memo(() => {
   }
 })
 
-const styles = StyleSheet.create({
+// 样式表里有随明暗切换的底色（Hero 卡 / 圆形入口 / 封面占位），
+// 直接用 StyleSheet.create 会在模块加载时把颜色固化，
+// 于是浅色下这些块仍是深色 —— 必须走 createThemedStyle 的 Proxy。
+const styles = createThemedStyle(() => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -484,7 +489,7 @@ const styles = StyleSheet.create({
   hero: {
     height: scaleSizeH(178),
     borderRadius: TIDE_RADIUS.lg,
-    backgroundColor: '#17191F',
+    backgroundColor: TIDE_COLOR.deepStrong,
   },
   heroPressed: {
     opacity: 0.94,
@@ -502,7 +507,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: TIDE_RADIUS.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: TIDE_COLOR.fillMid,
   },
   heroCoverFallback: {
     // 无封面时用品牌渐变的暗调铺底，而不是留一块灰
@@ -547,7 +552,9 @@ const styles = StyleSheet.create({
     width: scaleSizeW(52),
     height: scaleSizeW(52),
     borderRadius: TIDE_RADIUS.pill,
-    backgroundColor: '#202228',
+    backgroundColor: TIDE_COLOR.fillTop,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: TIDE_COLOR.edgeSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -582,7 +589,7 @@ const styles = StyleSheet.create({
     width: scaleSizeW(104),
     height: scaleSizeW(104),
     borderRadius: TIDE_RADIUS.md,
-    backgroundColor: '#202228',
+    backgroundColor: TIDE_COLOR.fillMid,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -607,13 +614,13 @@ const styles = StyleSheet.create({
     paddingVertical: scaleSizeH(8),
     paddingHorizontal: scaleSizeW(8),
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: TIDE_COLOR.edgeSoft,
   },
   recentCover: {
     width: scaleSizeW(46),
     height: scaleSizeW(46),
     borderRadius: TIDE_RADIUS.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: TIDE_COLOR.fillMid,
   },
   recentMeta: {
     flexGrow: 1,
@@ -651,4 +658,4 @@ const styles = StyleSheet.create({
   subHeaderSpacer: {
     width: 38,
   },
-})
+}))

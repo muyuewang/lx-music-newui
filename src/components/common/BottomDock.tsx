@@ -11,18 +11,51 @@ import { scaleSizeH } from '@/utils/pixelRatio'
 import GlassSurface from '@/components/liquid/GlassSurface'
 import { TIDE_RADIUS, useTideColor } from '@/components/liquid/tide'
 import { useTheme } from '@/store/theme/hook'
+import { Navigation } from 'react-native-navigation'
 
-// 底部系统导航栏高度。项目没有装 react-native-safe-area-context，
-// 用它来算需要多引一个原生依赖，不值得。
-// screen 高度包含导航栏，window 高度不含，两者之差就是导航栏占位，
-// 在没有导航栏或手势导航时差值为 0，正好不需要额外留白。
+/**
+ * 读取状态栏高度 —— 用来从 `screen - window` 里剔掉上部那一截。
+ *
+ * 为什么不装 react-native-safe-area-context：只为拿两个数值多引一个
+ * 原生依赖不划算。项目已经在用 react-native-navigation，它把
+ * statusBarHeight 通过 constantsSync 同步暴露出来了。
+ */
+const readStatusBarHeight = (): number => {
+  try {
+    const h = Navigation.constantsSync().statusBarHeight
+    return typeof h === 'number' && h > 0 && h < 200 ? h : 0
+  } catch {
+    // 原生常量在极早期或某些定制 ROM 上可能取不到，
+    // 取不到就当作 0，退化成「按差值全算导航栏」的旧行为，不至于崩。
+    return 0
+  }
+}
+
+/**
+ * 底部系统导航栏高度（dock 下方需要额外让出的那一截）。
+ *
+ * ⚠️ 这里曾经写错过，症状是 dock 底下空出一大块。
+ *
+ * `screen - window` 得到的是「状态栏 + 导航栏」的**总和**，不是导航栏高度：
+ * 本项目没有开全屏（`NavigationActivity` 默认布局，非 edge-to-edge），
+ * window 同时被状态栏和导航栏挤压，所以差值里含着状态栏那一截。
+ *
+ * 早期直接把这个总和当底部 inset 用，于是 dock 距屏幕底部 =
+ * 状态栏 + 导航栏 + 20(设计留白) —— 相当于平白多空了整个状态栏的高度，
+ * 真机上看起来就是「胶囊浮在半空、下面拖一条大缝」。
+ *
+ * 正确做法是减掉状态栏：差值 - statusBarHeight 才是真正的导航栏占位。
+ * 差值本身不可信时（横屏 / 分屏会混入别的装饰，正常竖屏在 0~120 之间）
+ * 整体回退成 0，宁可贴底也不要凭空多留。
+ */
 const getBottomInset = () => {
   const screenH = Dimensions.get('screen').height
   const windowH = Dimensions.get('window').height
   const diff = screenH - windowH
-  // 竖屏下差异正常在 0~120 之间；横屏或分屏时该差值会混入状态栏，
-  // 超过 120 认为不可信，回退成 0，避免把 dock 顶到屏幕中间
-  return diff > 0 && diff < 120 ? diff : 0
+  if (!(diff > 0 && diff < 120)) return 0
+  // 三键导航时 diff ≈ 状态栏 + 48dp 导航栏；手势导航时 diff ≈ 状态栏 + 手势条。
+  // 减完若剩负数（diff 其实就是纯状态栏、没有导航栏占位）则归零。
+  return Math.max(0, diff - readStatusBarHeight())
 }
 
 // TIDE 规范：Tab Bar 左右 16、距底 24、高 64、胶囊形（radius 999）。

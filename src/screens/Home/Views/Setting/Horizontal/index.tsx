@@ -11,7 +11,9 @@ import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 const styles = createThemedStyle(() => (createStyle({
   tideContainer: {
-    backgroundColor: TIDE_COLOR.bg,
+    // 同 Vertical/Main.tsx：外层已有主题渐变背景图，这层必须是透明的，
+    // 否则整屏退回纯色平面，玻璃也无处吸色。
+    backgroundColor: 'transparent',
     borderTopWidth: 0,
   },
   tideNav: {

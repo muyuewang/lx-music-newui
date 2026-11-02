@@ -213,30 +213,38 @@ dependencies {
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 
 /**
- * 把 release 的五个 ABI 产物汇总到项目根目录的 dist/。
+ * 把 release 的五个 ABI 产物汇总到项目根目录的 dist/<版本号>/。
  *
  * 为什么要这一步：assembleRelease 会把 APK 分散写在
  * android/app/build/outputs/apk/release/ 下，文件名带 ABI 后缀，
  * 但发布时需要的是「一个目录里整齐放着全部安装包」。
  * 手动 cp 容易漏（比如忘了 universal），所以固化成任务。
  *
+ * 为什么按版本号建子目录：早期五个包直接摊在 dist/ 根下，
+ * 每次改版本号都要覆盖同名文件、或留下上一版的残留，
+ * 想找出「1.9.1 那批」只能靠文件名逐个数。现在一版一个目录，
+ * 历史产物天然并存，发版时把整个子目录拖进 Release 即可。
+ * 目录名统一取 versionName（与 APK 文件名里的 v 前缀保持一致）。
+ *
  * 用法：./gradlew assembleRelease copyApksToDist
  */
 tasks.register("copyApksToDist", Copy) {
     group = "distribution"
-    description = "Copy release APKs to <project>/dist"
+    description = "Copy release APKs to <project>/dist/<versionName>"
     // 必须在 assembleRelease 之后跑：一起写进命令行时 Gradle 不保证顺序，
     // 若先执行本任务，outputs 目录还是空的，会被判定成 NO-SOURCE 直接跳过。
     mustRunAfter "assembleRelease"
     // 放在 android/app 下，所以项目根是 ../../..
-    def distDir = new File(project.rootProject.projectDir.parentFile, "dist")
+    def distRoot = new File(project.rootProject.projectDir.parentFile, "dist")
+    // 用配置期就能拿到的 versionName 作为子目录名，保证与产物文件名同源。
+    def versionDir = new File(distRoot, "v${verName}")
     from("${buildDir}/outputs/apk/release") {
         include "*.apk"
     }
-    into distDir
+    into versionDir
     doLast {
-        println "APKs copied to: ${distDir.absolutePath}"
-        distDir.listFiles()?.findAll { it.name.endsWith(".apk") }?.sort { it.name }?.each {
+        println "APKs copied to: ${versionDir.absolutePath}"
+        versionDir.listFiles()?.findAll { it.name.endsWith(".apk") }?.sort { it.name }?.each {
             println "  ${it.name}  ${(it.length() / 1024 / 1024).round(2)} MB"
         }
     }

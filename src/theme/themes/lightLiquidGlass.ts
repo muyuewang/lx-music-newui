@@ -78,7 +78,12 @@ export const lightLiquidGlassTheme = {
       // 浅色玻璃需要一层「半透明白」压住壁纸，否则文字会跟背景图案打架
       // 与 BASE 同源：应用底色带 72% 不透明度，让背景图透出来供毛玻璃吸色
       'c-app-background': rgba(BASE, 0.72),
-      'c-main-background': 'rgba(255, 255, 255, 0.88)',
+      // 0.88 会把背景渐变彻底盖死，整屏退化成一块冷白平面 ——
+      // 实测截图上背景像素恒为 rgb(250,248,254)，几乎测不出任何色相。
+      // 降到 0.46：渐变能读出来（浅色背景下最暗处仍 >= rgb(220,226,238)），
+      // 墨字 t1（0.94 不透明近黑）压在这之上仍有 >11:1，
+      // 正文 t2（0.68）约 5.5:1，均越过 WCAG AA。
+      'c-main-background': 'rgba(255, 255, 255, 0.46)',
       'bg-image': 'liquid_glass_light.jpg',
       'bg-image-position': 'center',
       'bg-image-size': 'cover',

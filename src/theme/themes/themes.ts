@@ -4276,7 +4276,7 @@ export default [
       },
       "extInfo": {
         "c-app-background": "rgba(6, 7, 12, 0.55)",
-        "c-main-background": "rgba(6, 7, 14, 0.84)",
+        "c-main-background": "rgba(6, 7, 14, 0.34)",
         "bg-image": "liquid_glass.jpg",
         "bg-image-position": "center",
         "bg-image-size": "cover",

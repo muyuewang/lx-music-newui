@@ -14,7 +14,7 @@ import { createStyle } from '@/utils/tools'
 import { DOCK_CONTENT_BOTTOM } from '@/components/common/BottomDock'
 import { SETTING_SCREENS, type SettingScreenIds } from '../Main'
 import { useTheme } from '@/store/theme/hook'
-import { TIDE_COLOR, TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
+import { TIDE_SPACE, createThemedStyle } from '@/components/liquid/tide'
 import NavList from './NavList'
 import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
@@ -24,7 +24,10 @@ type FlatListType = FlatListProps<SettingScreenIds>
 const styles = createThemedStyle(() => (createStyle({
   tideContainer: {
     flex: 1,
-    backgroundColor: TIDE_COLOR.bg,
+    // 不能铺 TIDE_COLOR.bg：设置页嵌在 Home 内，外层 PageContent 已经铺了
+    // 主题渐变背景图。这里再盖一层近黑实色，等于把整屏渐变连同
+    // 玻璃的吸色来源一起抹平，看起来就是一块纯色平面。
+    backgroundColor: 'transparent',
   },
   tideContent: {
     paddingHorizontal: TIDE_SPACE.screen,

@@ -56,11 +56,21 @@ export default forwardRef<LoadingMaskType, {}>((props, ref) => {
   }, [animFade])
 
 
+  // 遮罩不能用 c-main-background。
+  //
+  // 那个键的语义是「页面底色」，为了让背景渐变透出来已经把它的
+  // alpha 降到 0.34（深）/ 0.46（浅）。直接拿来当加载遮罩会变成
+  // 半透明玻璃片 —— 下面的列表照样看得见，遮罩形同虚设。
+  // 遮罩需要的是「盖住」，所以这里按明暗单独取一个高不透明度底色。
+  const maskColor = useMemo(() => (theme.isDark
+    ? 'rgba(6, 7, 14, 0.92)'
+    : 'rgba(255, 255, 255, 0.92)'), [theme.isDark])
+
   const maskComponent = useMemo(() => (
-    <Animated.View style={{ ...styles.container, backgroundColor: theme['c-main-background'], opacity: animFade }}>
+    <Animated.View style={{ ...styles.container, backgroundColor: maskColor, opacity: animFade }}>
       <Loading size={25} label={t('list_loading')} />
     </Animated.View>
-  ), [animFade, t, theme])
+  ), [animFade, t, maskColor])
 
   return maskVisible ? maskComponent : null
 })

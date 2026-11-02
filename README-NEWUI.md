@@ -23,7 +23,29 @@
 
 新样式仅在 `liquid_glass` 主题下启用，其他主题保持原样。
 
-### 3. 设置页精简（本版重点）
+### 3. 全局渐变背景 + dock 贴底修复（v1.9.2）
+
+两套液态玻璃主题都加了渐变底色：
+
+- **背景素材重制**：`liquid_glass.jpg` / `liquid_glass_light.jpg` 原本就是渐变图，但对比太平。重做成「大尺度对角线渐变 + 多光源柔光斑」——深色是左上紫蓝极光、右侧青调余光、底部紫晕；浅色是左上淡紫、右上淡蓝、右中淡青、左下淡粉。
+- **底色让出透明度**（这才是一直看不见渐变的原因）：`c-main-background` 深色 `0.84 → 0.34`、浅色 `0.88 → 0.46`。改前实测背景像素恒为 `rgb(250,248,254)`，等于一块纯色板，背景图再漂亮也透不出来。
+- **拆掉两处纯色遮罩**：设置页 `tideContainer` 原本铺 `TIDE_COLOR.bg` 实色，等于在渐变之上再盖一层黑；改为 `transparent`（竖屏 / 横屏两处）。
+- **修复连带副作用**：`LoadingMask` 原先借 `c-main-background` 当加载遮罩，透明度降下来后会变成半透明玻璃片、遮不住列表。改为按明暗单独取 `0.92` 高不透明度底色。
+
+dock 底部空一大块（真机反馈）：
+
+- 根因是 `getBottomInset()` 用 `screen - window` 当底部导航栏高度。本项目没开全屏，`window` 同时被状态栏和导航栏挤压，所以差值其实是**状态栏 + 导航栏之和**。把它整个当底部 inset，dock 距屏幕底部就变成「状态栏 + 导航栏 + 20dp」，平白多空出整个状态栏。
+- 修复：从差值里减掉 `Navigation.constantsSync().statusBarHeight`，负值归零。实测胶底下边缘距屏幕底部由 88px 收回 40px（即 20dp 设计留白），下方列表正常透出。
+
+对比度守住了 WCAG AA（按背景图最不利处实测，非取中间值）：
+
+| 层级 | 深色主题 | 浅色主题 |
+| --- | --- | --- |
+| t1 标题 | 11.48:1 | 14.45:1 |
+| t2 正文 | 5.81:1 | 6.17:1 |
+| t3 元信息 | 3.18:1（越过大字线 3:1） | 3.63:1（同左） |
+
+### 4. 设置页精简
 
 - 删除「软件更新」与「关于 lx-music」两个入口，整个版本模块（`src/core/version.ts`、`src/store/version/`、`VersionModal`）一并移除。
 - 删除首次启动的许可协议弹窗（`PactModal`）：装好直接进发现页，不再有免责声明或「谨防倒卖」提示。
@@ -31,7 +53,7 @@
 - 主题设置只保留「液态玻璃（深色）」「液态玻璃（浅色）」两项，去掉无消费点的「字体阴影」开关。
 - 现在顶部只有四个分类：基本设置 / 播放设置 / 主题设置 / 桌面歌词。
 
-### 4. 播放与交互修复
+### 5. 播放与交互修复
 
 | 问题 | 修复 |
 | --- | --- |
@@ -63,16 +85,21 @@ npm install
 cd android && ./gradlew assembleRelease copyApksToDist
 ```
 
-`copyApksToDist` 会把 `android/app/build/outputs/apk/release/*.apk` 拷到项目根的 `dist/`，文件名统一为 `lx-music-newui-v<versionName>-<abi>.apk`：
+`copyApksToDist` 会把 `android/app/build/outputs/apk/release/*.apk` 拷到项目根的 `dist/v<versionName>/`，文件名统一为 `lx-music-newui-v<versionName>-<abi>.apk`：
 
 ```
 dist/
-  lx-music-newui-v1.9.1-arm64-v8a.apk
-  lx-music-newui-v1.9.1-armeabi-v7a.apk
-  lx-music-newui-v1.9.1-universal.apk
-  lx-music-newui-v1.9.1-x86.apk
-  lx-music-newui-v1.9.1-x86_64.apk
+  v1.9.2/
+    lx-music-newui-v1.9.2-arm64-v8a.apk
+    lx-music-newui-v1.9.2-armeabi-v7a.apk
+    lx-music-newui-v1.9.2-universal.apk
+    lx-music-newui-v1.9.2-x86.apk
+    lx-music-newui-v1.9.2-x86_64.apk
+  v1.9.1/          ← 历史版本各自保留，不再互相覆盖
+    ...
 ```
+
+一版一个子目录：早期五个包直接摊在 `dist/` 根下，改版本号就得覆盖同名文件或留下上一版残留，想找「某个版本那批包」只能靠文件名逐个认。子目录名与 `package.json` 的 `version` 同源，发版时把整个子目录拖进 Release 即可。
 
 产物名前缀由 `android/app/build.gradle` 里的 `applicationName` 变量控制，与 `package.json` 的 `name` 解耦（后者参与 RN 模块解析，不宜改动）。
 

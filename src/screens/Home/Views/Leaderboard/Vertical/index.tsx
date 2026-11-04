@@ -7,9 +7,7 @@ import { getLeaderboardSetting, saveLeaderboardSetting } from '@/utils/data'
 import DrawerLayoutFixed, { type DrawerLayoutFixedType } from '@/components/common/DrawerLayoutFixed'
 import HeaderBar, { type HeaderBarType, type HeaderBarProps } from './HeaderBar'
 import { scaleSizeW } from '@/utils/pixelRatio'
-import { useTheme } from '@/store/theme/hook'
 // import { BorderWidths } from '@/theme'
-// import { useTheme } from '@/store/theme/hook'
 import BoardsList, { type BoardsListType, type BoardsListProps } from '../BoardsList'
 import type { InitState as CommonState } from '@/store/common/state'
 import settingState from '@/store/setting/state'
@@ -17,13 +15,16 @@ import { getBoardsList } from '@/core/leaderboard'
 import { COMPONENT_IDS } from '@/config/constant'
 import { handleCollect, handlePlay } from '../listAction'
 import boardState from '@/store/leaderboard/state'
+import { GlassDrawerContent, useDrawerBackgroundColor } from '@/components/liquid/GlassDrawer'
 
 
 const MAX_WIDTH = scaleSizeW(200)
 
 export default () => {
   const drawer = useRef<DrawerLayoutFixedType>(null)
-  const theme = useTheme()
+  // 抽屉底色：玻璃主题下必须透明，否则原生会涂上不透明的深蓝，
+  // 盖掉 GlassDrawerContent 的模糊。
+  const drawerBg = useDrawerBackgroundColor()
   const musicListRef = useRef<MusicListType>(null)
   const isUnmountedRef = useRef(false)
   const boardsListRef = useRef<BoardsListType>(null)
@@ -81,12 +82,14 @@ export default () => {
 
   const navigationView = () => {
     return (
-      <BoardsList
-        ref={boardsListRef}
-        onBoundChange={onBoundChange}
-        onCollect={onCollect}
-        onPlay={onPlay}
-      />
+      <GlassDrawerContent>
+        <BoardsList
+          ref={boardsListRef}
+          onBoundChange={onBoundChange}
+          onCollect={onCollect}
+          onPlay={onPlay}
+        />
+      </GlassDrawerContent>
     )
   }
 
@@ -128,7 +131,7 @@ export default () => {
       widthPercentageMax={MAX_WIDTH}
       drawerPosition={settingState.setting['common.drawerLayoutPosition']}
       renderNavigationView={navigationView}
-      drawerBackgroundColor={theme['c-content-background']}
+      drawerBackgroundColor={drawerBg}
       style={{ elevation: 1 }}
     >
       <View style={styles.container}>

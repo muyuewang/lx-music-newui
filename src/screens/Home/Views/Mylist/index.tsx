@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import settingState from '@/store/setting/state'
 import MusicList from './MusicList'
 import MyList from './MyList'
-import { useTheme } from '@/store/theme/hook'
 import DrawerLayoutFixed, { type DrawerLayoutFixedType } from '@/components/common/DrawerLayoutFixed'
+import { GlassDrawerContent, useDrawerBackgroundColor } from '@/components/liquid/GlassDrawer'
 import { COMPONENT_IDS } from '@/config/constant'
 import { scaleSizeW } from '@/utils/pixelRatio'
 import type { InitState as CommonState } from '@/store/common/state'
@@ -12,7 +12,9 @@ const MAX_WIDTH = scaleSizeW(400)
 
 export default () => {
   const drawer = useRef<DrawerLayoutFixedType>(null)
-  const theme = useTheme()
+  // 玻璃主题下必须返回 transparent，否则原生抽屉会涂上不透明深蓝，
+  // 把抽屉内容的玻璃模糊整个盖掉（排行榜/歌单一并如此）。
+  const drawerBg = useDrawerBackgroundColor()
   // const [width, setWidth] = useState(0)
 
   useEffect(() => {
@@ -49,7 +51,11 @@ export default () => {
     }
   }, [])
 
-  const navigationView = () => <MyList />
+  const navigationView = () => (
+    <GlassDrawerContent>
+      <MyList />
+    </GlassDrawerContent>
+  )
   // console.log('render drawer content')
 
   return (
@@ -61,7 +67,7 @@ export default () => {
       widthPercentageMax={MAX_WIDTH}
       drawerPosition={settingState.setting['common.drawerLayoutPosition']}
       renderNavigationView={navigationView}
-      drawerBackgroundColor={theme['c-content-background']}
+      drawerBackgroundColor={drawerBg}
       style={{ elevation: 1 }}
     >
       <MusicList />

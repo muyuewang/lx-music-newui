@@ -145,7 +145,13 @@ const styles = createThemedStyle(() => (createStyle({
     borderWidth: 1,
     borderColor: TIDE_COLOR.edgeSoft,
     borderBottomColor: TIDE_COLOR.edgeSoft,
-    backgroundColor: TIDE_COLOR.bgElev,
+    /**
+     * 原来是 TIDE_COLOR.bgElev —— 深色 #0B0D16 / 浅色 #FFFFFF，
+     * 都是完全不透明的实心板，浮在列表上像贴了一张纸条。
+     * 换成 fillTop（半透明白雾）：深色下背后列表会透出来，
+     * 浅色下是高不透明白，等于原来的观感但保留了边缘层次。
+     */
+    backgroundColor: TIDE_COLOR.fillTop,
     padding: 4,
     paddingHorizontal: TIDE_SPACE.row,
   },

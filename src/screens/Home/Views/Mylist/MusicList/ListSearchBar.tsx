@@ -150,7 +150,11 @@ const styles = createThemedStyle(() => (createStyle({
     borderWidth: 1,
     borderColor: TIDE_COLOR.edgeSoft,
     borderBottomColor: TIDE_COLOR.edgeSoft,
-    backgroundColor: TIDE_COLOR.bgElev,
+    /**
+     * 同 MultipleModeBar：原来是不透明的 bgElev，浮在列表上是一块实心板。
+     * 改成 fillTop 半透明白雾，深色主题下背后内容能透出来。
+     */
+    backgroundColor: TIDE_COLOR.fillTop,
     paddingLeft: TIDE_SPACE.row * 2,
   },
   container: {

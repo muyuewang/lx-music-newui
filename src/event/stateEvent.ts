@@ -112,6 +112,20 @@ export class StateEvent extends Event {
   sourceNamesUpdated(names: CommonState['sourceNames']) {
     this.emit('sourceNamesUpdated', names)
   }
+
+  /**
+   * 下载队列变化（增删、进度、状态）。
+   *
+   * 下载页与「我的」页的下载计数都订阅它，避免各自轮询。
+   */
+  downloadListChanged(list: LX.Download.ListItem[]) {
+    this.emit('downloadListChanged', list)
+  }
+
+  /** 当前正在下载的任务 id 变化（null 表示空闲）。 */
+  downloadActiveChanged(id: string | null) {
+    this.emit('downloadActiveChanged', id)
+  }
 }
 
 

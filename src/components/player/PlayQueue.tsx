@@ -3,6 +3,7 @@ import { Modal, Pressable, SectionList, StyleSheet, View, useWindowDimensions } 
 import { Icon } from '@/components/common/Icon'
 import Text from '@/components/common/Text'
 import { createThemedStyle, TIDE_COLOR, useTideColor } from '@/components/liquid/tide'
+import GlassSurface from '@/components/liquid/GlassSurface'
 import { usePlayInfo, usePlayMusicInfo } from '@/store/player/hook'
 import playerState from '@/store/player/state'
 import playerActions from '@/store/player/action'
@@ -248,7 +249,17 @@ export default ({ visible, onClose }: { visible: boolean, onClose: () => void })
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} accessibilityRole="button" accessibilityLabel="关闭播放队列" />
-        <View accessibilityViewIsModal style={[styles.sheet, { height: Math.min(height * 0.72, 640) }]}>
+        {/* 播放队列过去用 TIDE_COLOR.bgElev 当底 —— 那是 #0B0D16 的实心板，
+            盖在列表上完全看不出材质。改用 GlassSurface 后
+            下面的歌曲列表会透出来，和 dock / 播放条是一套材质。 */}
+        <GlassSurface
+          radius={0}
+          topRadius={28}
+          style={[styles.sheet, { height: Math.min(height * 0.72, 640) }]}
+          contentStyle={styles.sheetContent}
+          tintAlpha={0.16}
+          saturationAlpha={0.18}
+        >
           <View style={styles.header}>
             <View style={styles.headerInfo}>
               <Text accessibilityRole="header" size={19} color={palette.t1} style={styles.title}>播放队列</Text>
@@ -352,7 +363,7 @@ export default ({ visible, onClose }: { visible: boolean, onClose: () => void })
                 </View>
               ) : null}
           />
-        </View>
+        </GlassSurface>
       </View>
     </Modal>
   )
@@ -360,7 +371,15 @@ export default ({ visible, onClose }: { visible: boolean, onClose: () => void })
 
 const styles = createThemedStyle(() => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: TIDE_COLOR.veil },
-  sheet: { minHeight: 0, backgroundColor: TIDE_COLOR.bgElev, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: TIDE_COLOR.edgeSoft },
+  sheet: { minHeight: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  /**
+   * 玻璃面板的内容层。
+   *
+   * sheet 只负责定位与高度，材质由 GlassSurface 提供。
+   * 裁剪放在内容层：放外层会把 elevation 阴影一起切掉，
+   * 顶部圆角处会留下一条生硬的方边。
+   */
+  sheetContent: { flex: 1, minHeight: 0, overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28 },
   list: { flex: 1, minHeight: 0 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10 },
   headerInfo: { flex: 1, paddingRight: 8 },

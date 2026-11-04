@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 import settingState from '@/store/setting/state'
 import Content from './Content'
 import TagList from './TagList'
-import { useTheme } from '@/store/theme/hook'
 import DrawerLayoutFixed, { type DrawerLayoutFixedType } from '@/components/common/DrawerLayoutFixed'
+import { GlassDrawerContent, useDrawerBackgroundColor } from '@/components/liquid/GlassDrawer'
 import { COMPONENT_IDS } from '@/config/constant'
 import { scaleSizeW } from '@/utils/pixelRatio'
 import type { InitState as CommonState } from '@/store/common/state'
@@ -12,7 +12,8 @@ const MAX_WIDTH = scaleSizeW(560)
 
 export default () => {
   const drawer = useRef<DrawerLayoutFixedType>(null)
-  const theme = useTheme()
+  // 玻璃主题下透明，让 MTagList 的玻璃模糊透出背后的歌单内容。
+  const drawerBg = useDrawerBackgroundColor()
 
   useEffect(() => {
     const handleFixDrawer = (id: CommonState['navActiveId']) => {
@@ -38,7 +39,11 @@ export default () => {
     }
   }, [])
 
-  const navigationView = () => <TagList />
+  const navigationView = () => (
+    <GlassDrawerContent>
+      <TagList />
+    </GlassDrawerContent>
+  )
   // console.log('render drawer content')
 
   return (
@@ -49,7 +54,7 @@ export default () => {
       widthPercentageMax={MAX_WIDTH}
       drawerPosition={settingState.setting['common.drawerLayoutPosition']}
       renderNavigationView={navigationView}
-      drawerBackgroundColor={theme['c-content-background']}
+      drawerBackgroundColor={drawerBg}
       style={{ elevation: 1 }}
     >
       <Content />

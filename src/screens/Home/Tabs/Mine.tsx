@@ -29,8 +29,10 @@ import { getListMusics } from '@/utils/data'
 import { scaleSizeH, scaleSizeW } from '@/utils/pixelRatio'
 import MusicList from '../Views/Mylist/MusicList'
 import Setting from '../Views/Setting'
+import Download from '../Views/Download'
+import { useDownloadCount } from '@/store/download/hook'
 
-type SubView = 'home' | 'list' | 'setting'
+type SubView = 'home' | 'list' | 'setting' | 'download'
 
 /**
  * 资料库入口（SPEC §6 的四宫格变体）：玻璃圆 + 图标 + 计数 + 标签。
@@ -152,6 +154,7 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (view: SubView, listId?: stri
   const lists = useMyList()
   const showBackBtn = useSettingValue('common.showBackBtn')
   const showExitBtn = useSettingValue('common.showExitBtn')
+  const downloadCount = useDownloadCount()
   const [loveCount, setLoveCount] = useState(0)
   const [defaultCount, setDefaultCount] = useState(0)
 
@@ -222,8 +225,9 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (view: SubView, listId?: stri
           />
           <QuickEntry
             icon="download-2"
+            count={downloadCount}
             label={t('mine_downloaded')}
-            onPress={() => { onOpen('setting') }}
+            onPress={() => { onOpen('download') }}
           />
         </View>
 
@@ -332,6 +336,18 @@ const SettingView = themedMemo(({ onBack }: { onBack: () => void }) => {
   )
 })
 
+/**
+ * 已下载。
+ *
+ * 不再套一层 SubHeader —— 下载页自己带标题栏（还要放「清除已完成」按钮），
+ * 外面再包一层会出现两条返回栏、两个标题。
+ */
+const DownloadView = themedMemo(({ onBack }: { onBack: () => void }) => (
+  <View style={styles.container}>
+    <Download onBack={onBack} />
+  </View>
+))
+
 export default themedMemo(() => {
   const [view, setView] = useState<SubView>('home')
 
@@ -367,6 +383,7 @@ export default themedMemo(() => {
   switch (view) {
     case 'list': return <ListView onBack={handleBack} />
     case 'setting': return <SettingView onBack={handleBack} />
+    case 'download': return <DownloadView onBack={handleBack} />
     default: return <HomeView onOpen={handleOpen} />
   }
 })

@@ -1,10 +1,12 @@
 import { memo, useCallback, useEffect, useRef } from 'react'
-import { View, TouchableOpacity } from 'react-native'
+import { View, TouchableOpacity, StyleSheet } from 'react-native'
 import Text from '@/components/common/Text'
 import { Icon } from '@/components/common/Icon'
 import { createStyle } from '@/utils/tools'
 import { getExternalStoragePaths, stat } from '@/utils/fs'
 import { useTheme } from '@/store/theme/hook'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
+import { TIDE_COLOR, TIDE_TYPE } from '@/components/liquid/tide'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import { useStatusbarHeight } from '@/store/common/hook'
 import NewFolderModal, { type NewFolderType } from './NewFolderModal'
@@ -59,25 +61,40 @@ export default memo(({
 
   return (
     <>
+      {/* 液态玻璃主题下这一条曾直接铺 c-content-background ——
+          那是 rgb(22,31,60) 的不透明深蓝，压在磨砂面板顶部就是一道突兀的蓝条。
+          改成半透明的 fillBottom + 极细底描边：与下方列表同属一块玻璃，
+          只靠一层薄色和分隔线区分层级，而不是换一种材质。 */}
       <View style={{
         ...styles.header,
         height: scaleSizeH(50) + statusBarHeight,
         paddingTop: statusBarHeight,
-        backgroundColor: theme['c-content-background'],
+        backgroundColor: isLiquidGlass(theme) ? TIDE_COLOR.fillBottom : theme['c-content-background'],
+        borderBottomWidth: isLiquidGlass(theme) ? StyleSheet.hairlineWidth : 0,
+        borderBottomColor: TIDE_COLOR.edgeSoft,
       }} onStartShouldSetResponder={() => true}>
         <View style={styles.titleContent}>
-          <Text color={theme['c-primary-font']} numberOfLines={1}>{title}</Text>
-          <Text style={styles.subTitle} color={theme['c-primary-font']} size={13} numberOfLines={1}>{path}</Text>
+          <Text
+            color={isLiquidGlass(theme) ? TIDE_COLOR.t1 : theme['c-primary-font']}
+            size={isLiquidGlass(theme) ? TIDE_TYPE.headline.size : 15}
+            numberOfLines={1}
+          >{title}</Text>
+          <Text
+            style={styles.subTitle}
+            color={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-primary-font']}
+            size={isLiquidGlass(theme) ? TIDE_TYPE.foot.size : 13}
+            numberOfLines={1}
+          >{path}</Text>
         </View>
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionBtn} onPress={openStorage}>
-            <Icon name="sd-card" color={theme['c-primary-font']} size={22} />
+            <Icon name="sd-card" color={isLiquidGlass(theme) ? TIDE_COLOR.t2 : theme['c-primary-font']} size={22} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleShowNewFolderModal}>
-            <Icon name="add_folder" color={theme['c-primary-font']} size={22} />
+            <Icon name="add_folder" color={isLiquidGlass(theme) ? TIDE_COLOR.t2 : theme['c-primary-font']} size={22} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={refresh}>
-            <Icon name="available_updates" color={theme['c-primary-font']} size={22} />
+            <Icon name="available_updates" color={isLiquidGlass(theme) ? TIDE_COLOR.t2 : theme['c-primary-font']} size={22} />
           </TouchableOpacity>
         </View>
       </View>

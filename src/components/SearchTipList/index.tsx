@@ -4,6 +4,9 @@ import { StyleSheet, View, Animated } from 'react-native'
 // import { AppColors } from '@/theme'
 import { useTheme } from '@/store/theme/hook'
 import List, { type ItemT, type ListProps, type ListType } from './List'
+import GlassPanel from '@/components/liquid/GlassPanel'
+import { TIDE_RADIUS } from '@/components/liquid/tide'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
 // import InsetShadow from 'react-native-inset-shadow'
 
 export interface SearchTipListProps<T> extends ListProps<T> {
@@ -109,9 +112,25 @@ const Component = <T extends ItemT<T>>({ onPressBg = noop, ...props }: SearchTip
           { scaleY },
         ],
       }}>
-      <View style={{ ...styles.container, backgroundColor: theme['c-content-background'] }}>
-        <List ref={listRef} {...props} />
-      </View>
+      {/* 联想下拉过去用 c-content-background 当底色 —— 液态玻璃主题里
+          这个键是不透明的 rgb(22,31,60)，于是下拉是一整块深蓝板。
+          改成玻璃面板后，背后的搜索页内容会透出来，
+          与 dock / 播放条是同一种材质。 */}
+      {isLiquidGlass(theme)
+        ? <GlassPanel
+            radius={0}
+            bottomRadius={TIDE_RADIUS.md}
+            shadow
+            style={styles.container}
+            contentStyle={styles.tideContainer}
+            tintAlpha={0.14}
+            saturationAlpha={0.20}
+          >
+            <List ref={listRef} {...props} />
+          </GlassPanel>
+        : <View style={{ ...styles.container, backgroundColor: theme['c-content-background'] }}>
+            <List ref={listRef} {...props} />
+          </View>}
       <View style={styles.blank} onTouchStart={onPressBg}></View>
     </Animated.View>
   ), [onPressBg, props, scaleY, theme, translateY])
@@ -136,6 +155,19 @@ const styles = StyleSheet.create({
     // flexGrow: 0,
     // borderBottomWidth: BorderWidths.normal,
     elevation: 2,
+    maxHeight: '80%',
+  },
+  /**
+   * 玻璃面板的内容层。
+   *
+   * maxHeight 必须放这里而不是外层：外层是 GlassSurface 的 wrap，
+   * 它只负责定位与阴影；内容层才是真正撑开高度的盒子。
+   * 放在 wrap 上时 FlatList 会先按内容全高测量、再由 wrap 裁掉，
+   * 结果是下拉列表能拖到屏幕外。
+   */
+  tideContainer: {
+    flexGrow: 0,
+    overflow: 'hidden',
     maxHeight: '80%',
   },
   blank: {

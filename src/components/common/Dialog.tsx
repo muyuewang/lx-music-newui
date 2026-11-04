@@ -9,6 +9,7 @@ import { useTheme } from '@/store/theme/hook'
 import Text from './Text'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import { TIDE_COLOR, TIDE_RADIUS, TIDE_SPACE, TIDE_TYPE, createThemedStyle } from '@/components/liquid/tide'
+import GlassPanel from '@/components/liquid/GlassPanel'
 import { isLiquidGlass } from '@/theme/isLiquidGlass'
 
 const HEADER_HEIGHT = 20
@@ -39,6 +40,17 @@ const styles = createThemedStyle(() => (createStyle({
     borderWidth: 1,
     borderColor: TIDE_COLOR.edgeSoft,
     overflow: 'hidden',
+  },
+  /**
+   * 玻璃面板的内容层。
+   *
+   * radius 与 overflow 必须在这里再声明一次：GlassSurface 的 wrap 只负责
+   * 定位与阴影，真正的裁剪发生在内容层上。少了这行，弹窗内的列表
+   * 会从圆角外沿溢出来，四角出现方形的实体色块。
+   */
+  tidePanelContent: {
+    overflow: 'hidden',
+    borderRadius: TIDE_RADIUS.lg,
   },
   tideHeader: {
     height: 44,
@@ -124,16 +136,37 @@ export default forwardRef<DialogType, DialogProps>(({
       : null
   }, [closeBtn, theme, isTide])
 
+  // 标题栏与内容在两条材质分支里共用同一份 JSX，避免改一处漏一处。
+  const panelInner = (
+    <>
+      <View style={{ ...styles.header, backgroundColor: isTide ? 'transparent' : theme['c-primary-light-100-alpha-100'], ...(isTide ? styles.tideHeader : {}) }}>
+        <Text style={[styles.title, isTide ? styles.tideTitle : undefined, isTide ? TIDE_TYPE.headline.style : undefined]} size={isTide ? TIDE_TYPE.headline.size : 13} color={isTide ? TIDE_COLOR.t1 : theme['c-primary-light-1000']} numberOfLines={1}>{title}</Text>
+        {closeBtnComponent}
+      </View>
+      {children}
+    </>
+  )
+
   return (
     <Modal onHide={onHide} keyHide={keyHide} bgHide={bgHide} bgColor={isTide ? TIDE_COLOR.veil : 'rgba(50,50,50,.3)'} ref={modalRef}>
       <View style={{ ...styles.centeredView, paddingBottom: keyboardShown ? keyboardHeight : 0 }}>
-        <View style={{ ...styles.modalView, height, backgroundColor: theme['c-content-background'], ...(isTide ? styles.tideModal : {}) }} onStartShouldSetResponder={() => true}>
-          <View style={{ ...styles.header, backgroundColor: theme['c-primary-light-100-alpha-100'], ...(isTide ? styles.tideHeader : {}) }}>
-            <Text style={[styles.title, isTide ? styles.tideTitle : undefined, isTide ? TIDE_TYPE.headline.style : undefined]} size={isTide ? TIDE_TYPE.headline.size : 13} color={isTide ? TIDE_COLOR.t1 : theme['c-primary-light-1000']} numberOfLines={1}>{title}</Text>
-            {closeBtnComponent}
-          </View>
-          {children}
-        </View>
+        {/* 玻璃主题下弹窗过去用 TIDE_COLOR.bgElev 当底色 —— 深色是 #0B0D16、
+            浅色是 #FFFFFF，两者都是完全不透明的实心板，
+            在玻璃界面上像贴了一张纸。改用 GlassPanel 后
+            背后内容会透出来，与菜单/抽屉/侧边栏同一种材质。 */}
+        {isTide
+          ? <GlassPanel
+              radius={TIDE_RADIUS.lg}
+              style={[styles.modalView, height != null ? { height } : null]}
+              contentStyle={styles.tidePanelContent}
+              tintAlpha={0.16}
+              saturationAlpha={0.18}
+            >
+              {panelInner}
+            </GlassPanel>
+          : <View style={{ ...styles.modalView, height, backgroundColor: theme['c-content-background'] }} onStartShouldSetResponder={() => true}>
+              {panelInner}
+            </View>}
       </View>
     </Modal>
   )

@@ -10,6 +10,8 @@ import Main from './components/Main'
 import Footer from './components/Footer'
 import { sizeFormate } from '@/utils'
 import { useTheme } from '@/store/theme/hook'
+import { isLiquidGlass } from '@/theme/isLiquidGlass'
+import GlassPanel from '@/components/liquid/GlassPanel'
 import { type PathItem } from './components/ListItem'
 // import { getSelectedManagedFolder } from '@/utils/data'
 // let prevPath = externalStorageDirectoryPath
@@ -172,17 +174,32 @@ export default forwardRef<ListType, ListProps>(({
 
   // const dirList = useMemo(() => [parentDir, ...list], [list, parentDir])
 
+  const panel = (
+    <>
+      <Header
+        onRefreshDir={async(path) => readDir(path, readOptions.current.dirOnly, readOptions.current.filter, true)}
+        onOpenDir={async(path) => readDir(path, readOptions.current.dirOnly, readOptions.current.filter, false, true)}
+        title={readOptions.current.title}
+        path={path} />
+      <Main list={list} toParentDir={toParentDir} onSetPath={onSetPath} loading={isReading} />
+      <Footer onConfirm={handleConfirm} onHide={handleHide} dirOnly={readOptions.current.dirOnly} />
+    </>
+  )
+
   return (
     <Modal ref={modalRef} bgHide={false} statusBarPadding={false}>
-      <View style={{ ...styles.container, backgroundColor: theme['c-content-background'] }}>
-        <Header
-          onRefreshDir={async(path) => readDir(path, readOptions.current.dirOnly, readOptions.current.filter, true)}
-          onOpenDir={async(path) => readDir(path, readOptions.current.dirOnly, readOptions.current.filter, false, true)}
-          title={readOptions.current.title}
-          path={path} />
-        <Main list={list} toParentDir={toParentDir} onSetPath={onSetPath} loading={isReading} />
-        <Footer onConfirm={handleConfirm} onHide={handleHide} dirOnly={readOptions.current.dirOnly} />
-      </View>
+      {/* 选路径是全屏面板，过去整块铺 c-content-background ——
+          在液态玻璃主题里那是 rgb(22,31,60) 的不透明深蓝。
+          改成 GlassPanel 后，背后正在播放/浏览的界面会透过磨砂显出来，
+          与其它浮层（菜单 / 弹窗 / 抽屉）保持同一种材质。
+          radius=0：这是满屏面板，四角不该有圆角。 */}
+      {isLiquidGlass(theme)
+        ? <GlassPanel radius={0} shadow={false} style={styles.container} contentStyle={styles.glassContent}>
+            {panel}
+          </GlassPanel>
+        : <View style={{ ...styles.container, backgroundColor: theme['c-content-background'] }}>
+            {panel}
+          </View>}
     </Modal>
   )
 })
@@ -190,6 +207,9 @@ export default forwardRef<ListType, ListProps>(({
 
 const styles = createStyle({
   container: {
+    flex: 1,
+  },
+  glassContent: {
     flex: 1,
   },
 })

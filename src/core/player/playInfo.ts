@@ -4,6 +4,26 @@ import playerState from '@/store/player/state'
 import { getListMusicSync } from '@/utils/listManage'
 import { setProgress } from '@/core/player/progress'
 import { LIST_IDS } from '@/config/constant'
+import downloadState from '@/store/download/state'
+
+/**
+ * 按列表 id 取「可播放条目」。
+ *
+ * 下载队列不走 `listManage` 的 allMusicList：那份缓存是给普通歌单用的
+ * （元素是 MusicInfo，且由 listManage 自己按 id 增删维护），而下载队列的
+ * 元素是 ListItem（带 progress / metadata.filePath），由 `store/download` 维护。
+ * 混进同一张表会让 `getListMusics` 的类型和「加歌 / 删歌」逻辑同时失真。
+ *
+ * 只在 LIST_IDS.DOWNLOAD 这个分支上分流，其余列表行为完全不变。
+ */
+export const getPlayableList = (listId: string | null): LX.Music.MusicInfo[] | LX.Download.ListItem[] => {
+  if (listId === LIST_IDS.DOWNLOAD) {
+    // 只取已完成的任务：未完成 / 失败的条目没有可播文件，
+    // 把它们放进播放列表会让「下一首」落到一首半截的曲子上。
+    return downloadState.list.filter(item => item.status === 'completed')
+  }
+  return getListMusicSync(listId)
+}
 
 
 export const setMusicInfo = (musicInfo: Partial<LX.Player.MusicInfo>) => {
@@ -40,7 +60,7 @@ export const getPlayIndex = (listId: string | null, musicInfo: LX.Download.ListI
   playerPlayIndex: number
 } => {
   const { playInfo } = playerState
-  const playerList = getListMusicSync(playInfo.playerListId)
+  const playerList = getPlayableList(playInfo.playerListId)
 
   // if (listIndex < 0) throw new Error('music info not found')
   // playInfo.playIndex = listIndex
@@ -51,7 +71,7 @@ export const getPlayIndex = (listId: string | null, musicInfo: LX.Download.ListI
     playerPlayIndex = Math.min(playInfo.playerPlayIndex, playerList.length - 1)
   }
 
-  const list = getListMusicSync(listId)
+  const list = getPlayableList(listId)
   if (list.length && musicInfo) {
     const currentId = musicInfo.id
     playIndex = list.findIndex(m => m.id == currentId)
@@ -137,6 +157,5 @@ export const setPlayMusicInfo = (listId: string | null, musicInfo: LX.Download.L
 }
 
 export const getList = (listId: string | null): LX.Music.MusicInfo[] | LX.Download.ListItem[] => {
-  // return listId == LIST_ID_DOWNLOAD ? downloadList : getListMusicSync(listId)
-  return listId == LIST_IDS.DOWNLOAD ? [] : getListMusicSync(listId)
+  return getPlayableList(listId)
 }

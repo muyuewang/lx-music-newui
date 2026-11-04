@@ -9,8 +9,9 @@ import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import Text from './Text'
 import { scaleSizeH, scaleSizeW } from '@/utils/pixelRatio'
-import { TIDE_COLOR, TIDE_RADIUS, createThemedStyle } from '@/components/liquid/tide'
+import { createThemedStyle, TIDE_RADIUS, useTideColor } from '@/components/liquid/tide'
 import { isLiquidGlass } from '@/theme/isLiquidGlass'
+import GlassPanel from '@/components/liquid/GlassPanel'
 
 const menuItemHeight = scaleSizeH(40)
 const menuItemWidth = scaleSizeW(100)
@@ -40,32 +41,31 @@ const styles = createThemedStyle(() => (createStyle({
   },
   menu: {
     position: 'absolute',
-    // borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'lightgray',
     borderRadius: 2,
     backgroundColor: 'white',
     elevation: 3,
   },
+  /**
+   * 玻璃菜单的定位样式。
+   *
+   * 不能复用 styles.menu：那份样式带 `backgroundColor: 'white'` 与
+   * `borderRadius: 2`，盖在 GlassSurface 外层会把玻璃底盘涂成白板、
+   * 圆角也会跟 TIDE 的 18 打架。这里只保留定位，材质全交给 GlassPanel。
+   */
   tideMenu: {
-    backgroundColor: TIDE_COLOR.bgElev,
-    borderRadius: TIDE_RADIUS.md,
-    borderWidth: 1,
-    borderColor: TIDE_COLOR.edgeSoft,
+    position: 'absolute',
+  },
+  tideMenuContent: {
+    flex: 1,
     overflow: 'hidden',
+    borderRadius: TIDE_RADIUS.md,
   },
   menuItem: {
     paddingLeft: 10,
     paddingRight: 10,
-    // height: menuItemHeight,
-    // width: menuItemWidth,
-    // alignItems: 'center',
     justifyContent: 'center',
-    // backgroundColor: '#ccc',
   },
-  // menuText: {
-  //   // textAlign: 'center',
-  //   fontSize: 14,
-  // },
 })))
 
 interface Props<M extends Menus = Menus> {
@@ -95,6 +95,9 @@ const Menu = ({
 }: Props) => {
   const theme = useTheme()
   const isTide = isLiquidGlass(theme)
+  // 玻璃主题下颜色必须从调色板取，否则浅色主题里会拿到深色值。
+  // 这个 hook 同时负责「切主题时本组件会重渲染」的订阅。
+  const tint = useTideColor()
   // 危险操作的文字色：液态玻璃按明暗各给一个可读的红，旧配色主题用 Material red。
   const dangerColor = isTide
     ? (!theme.isDark ? '#C62828' : '#FF8B8A')
@@ -123,7 +126,9 @@ const Menu = ({
     const maxBottom = Math.max(minTop, viewportHeight - margin)
     const availableHeight = Math.max(0, maxBottom - minTop)
     const dividerCount = menus.filter(menu => menu.dividerBefore).length
-    const contentHeight = menus.length * menuItemStyle.height + dividerCount * StyleSheet.hairlineWidth + (isTide ? 2 : 0)
+    // 玻璃菜单没有边框占位（描边由 hairline 画在材质层上），
+    // 所以内容高度不再 +2，否则算出来的高度会比实际内容多两像素、滚动条误现。
+    const contentHeight = menus.length * menuItemStyle.height + dividerCount * StyleSheet.hairlineWidth
     const menuHeight = Math.min(contentHeight, availableHeight)
     const menuWidth = Math.min(menuItemStyle.width, Math.max(0, viewportWidth - margin * 2))
     const below = buttonPosition.y + buttonPosition.h
@@ -136,7 +141,7 @@ const Menu = ({
       : buttonPosition.x + buttonPosition.w - menuWidth
     const left = Math.max(margin, Math.min(preferredLeft, viewportWidth - margin - menuWidth))
     return { top, left, width: menuWidth, height: menuHeight }
-  }, [menus, menuItemStyle, buttonPosition, viewportWidth, viewportHeight, statusBarHeight, isTide])
+  }, [menus, menuItemStyle, buttonPosition, viewportWidth, viewportHeight, statusBarHeight])
 
   const menuPress = (menu: Menus[number]) => {
     // if (menu.disabled) return
@@ -144,71 +149,94 @@ const Menu = ({
     onHide()
   }
 
-  // console.log('render menu')
-  // console.log(activeId)
-  // console.log(menuStyle)
-  // console.log(menuItemStyle)
+  // 菜单项只在内容层渲染一次，玻璃与旧主题两条分支共用同一份 JSX。
+  const menuItems = (
+    <ScrollView
+      style={{ flex: 1 }}
+      keyboardShouldPersistTaps="always"
+      showsVerticalScrollIndicator
+      persistentScrollbar
+      nestedScrollEnabled
+    >
+      {
+        menus.map((menu) => {
+          const itemWidth = menuStyle.width
+          const textColor = menu.danger
+            ? dangerColor
+            : isTide
+              ? (menu.action == activeId ? tint.a2 : tint.t1)
+              : (menu.action == activeId ? theme['c-primary-font-active'] : undefined)
+          const divider = menu.dividerBefore
+            ? (
+                <View
+                  style={{
+                    width: itemWidth,
+                    height: StyleSheet.hairlineWidth,
+                    backgroundColor: isTide ? tint.edgeSoft : theme['c-border-background'],
+                  }}
+                />
+              )
+            : null
+          let item
+          if (menu.disabled) {
+            item = (
+              <View
+                style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height, opacity: 0.4 }}
+              >
+                <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
+              </View>
+            )
+          } else if (menu.action == activeId) {
+            item = (
+              <View
+                style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height }}
+              >
+                <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
+              </View>
+            )
+          } else {
+            item = (
+              <TouchableHighlight
+                style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height }}
+                accessibilityRole="button"
+                accessibilityLabel={menu.label}
+                underlayColor={isTide ? tint.fillMid : theme['c-primary-background-active']}
+                onPress={() => { menuPress(menu) }}
+              >
+                <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
+              </TouchableHighlight>
+            )
+          }
+          return (
+            <Fragment key={menu.action}>
+              {divider}
+              {item}
+            </Fragment>
+          )
+        })
+      }
+    </ScrollView>
+  )
+
   return (
     <View style={{ flex: 1 }} pointerEvents="box-none" onLayout={handleViewportLayout}>
-    <View style={{ ...styles.menu, ...menuStyle, backgroundColor: theme['c-content-background'], ...(isTide ? styles.tideMenu : {}) }} accessibilityViewIsModal>
-      <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator persistentScrollbar nestedScrollEnabled>
-        {
-          menus.map((menu) => {
-            const itemWidth = menuStyle.width - (isTide ? 2 : 0)
-            const textColor = menu.danger
-              ? dangerColor
-              : isTide
-                ? (menu.action == activeId ? TIDE_COLOR.a2 : TIDE_COLOR.t1)
-                : (menu.action == activeId ? theme['c-primary-font-active'] : undefined)
-            const divider = menu.dividerBefore ? (
-              <View
-                style={{
-                  width: itemWidth,
-                  height: StyleSheet.hairlineWidth,
-                  backgroundColor: isTide ? TIDE_COLOR.edgeSoft : theme['c-border-background'],
-                }}
-              />
-            ) : null
-            let item
-            if (menu.disabled) {
-              item = (
-                <View
-                  style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height, opacity: 0.4 }}
-                >
-                  <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
-                </View>
-              )
-            } else if (menu.action == activeId) {
-              item = (
-                <View
-                  style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height }}
-                >
-                  <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
-                </View>
-              )
-            } else {
-              item = (
-                <TouchableHighlight
-                  style={{ ...styles.menuItem, width: itemWidth, height: menuItemStyle.height }}
-                  accessibilityRole="button"
-                  accessibilityLabel={menu.label}
-                  underlayColor={isTide ? TIDE_COLOR.fillMid : theme['c-primary-background-active']}
-                  onPress={() => { menuPress(menu) }}
-                >
-                  <Text style={{ textAlign: center ? 'center' : 'left' }} color={textColor} size={fontSize} numberOfLines={1}>{menu.label}</Text>
-                </TouchableHighlight>
-              )
-            }
-            return (
-              <Fragment key={menu.action}>
-                {divider}
-                {item}
-              </Fragment>
-            )
-          })
-        }
-      </ScrollView>
-    </View>
+      {/* 玻璃主题下菜单曾是一块不透明的 rgb(22,31,60) 深蓝板
+          （因为直接拿了 c-content-background 当底色），
+          与旁边的 dock / 播放条完全不是同一种材质。
+          改成 GlassPanel 承载模糊与描边后，背后列表会透出来。 */}
+      {isTide
+        ? <GlassPanel
+            radius={TIDE_RADIUS.md}
+            style={[styles.tideMenu, menuStyle]}
+            contentStyle={styles.tideMenuContent}
+            tintAlpha={0.14}
+            saturationAlpha={0.20}
+          >
+            {menuItems}
+          </GlassPanel>
+        : <View style={{ ...styles.menu, ...menuStyle, backgroundColor: theme['c-content-background'] }} accessibilityViewIsModal>
+            {menuItems}
+          </View>}
     </View>
   )
 }
@@ -230,7 +258,6 @@ export interface MenuType {
 }
 
 const Component = <M extends Menus>({ menus, width, height, activeId, onHide, onPress, fontSize, center }: MenuProps<M>, ref: Ref<MenuType>) => {
-  // console.log(visible)
   const modalRef = useRef<ModalType>(null)
   const [position, setPosition] = useState<Position>({ w: 0, h: 0, x: 0, y: 0 })
   const [menuSize, setMenuSize] = useState<MenuSize>({ })

@@ -4,6 +4,8 @@ import Menu, { type Menus, type MenuType, type Position } from '@/components/com
 import { hasDislike } from '@/core/dislikeList'
 import { existsFile } from '@/utils/fs'
 import { hasMusicUrlByMusic } from '@/utils/data'
+import { downloadMusic, getAvailableQualitys, getQualityLabel } from '@/core/download'
+import { toast } from '@/utils/tools'
 
 export interface SelectInfo {
   musicInfo: LX.Music.MusicInfo
@@ -49,10 +51,13 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
   const menuRef = useRef<MenuType>(null)
   const selectInfoRef = useRef<SelectInfo>(initSelectInfo as SelectInfo)
   const [menus, setMenus] = useState<Menus>([])
+  // 音质菜单复用同一实例与同一锚点，见 OnlineList/ListMenu 的同名注释。
+  const anchorRef = useRef<Position>({ w: 0, h: 0, x: 0, y: 0 })
 
   useImperativeHandle(ref, () => ({
     show(selectInfo, position) {
       selectInfoRef.current = selectInfo
+      anchorRef.current = position
       handleSetMenu(selectInfo.musicInfo)
       if (visible) menuRef.current?.show(position)
       else {
@@ -71,7 +76,9 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
     const menu = [
       { action: 'play', label: t('play') },
       { action: 'playLater', label: t('play_later') },
-      // { action: 'download', label: '下载' },
+      // 本地文件已经在设备上了，再「下载」它没有意义（只会复制一份）；
+      // 也只有非本地源才有「选音质」这个概念。
+      { action: 'download', disabled: isLocal, label: t('download_quality_select') },
       { action: 'add', label: t('add_to') },
       { action: 'move', label: t('move_to') },
       { action: 'changePosition', label: t('change_position') },
@@ -103,8 +110,55 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
     })
   }
 
+  /**
+   * 打开音质选择。
+   *
+   * 本地歌单里可能混着本地文件和在线歌曲，只把在线的那部分送去下载 ——
+   * 本地条目没有 `_qualitys`，`getAvailableQualitys` 对它会一直返回空数组，
+   * 混进来只会让交集变空、把整个选项灰掉。
+   */
+  const openQualityMenu = () => {
+    const selectInfo = selectInfoRef.current
+    const raw = selectInfo.single
+      ? [selectInfo.musicInfo]
+      : (selectInfo.selectedList.length ? selectInfo.selectedList : [selectInfo.musicInfo])
+    const targets = raw.filter(info => info.source != 'local')
+
+    if (!targets.length) {
+      toast(t('download_quality_unavailable'))
+      return
+    }
+
+    let qualitys = getAvailableQualitys(targets[0])
+    if (targets.length > 1) {
+      qualitys = qualitys.filter(q => targets.every(info => getAvailableQualitys(info).includes(q)))
+    }
+
+    if (!qualitys.length) {
+      toast(t('download_quality_unavailable'))
+      return
+    }
+
+    setMenus(qualitys.map(q => ({
+      action: `quality:${q}`,
+      label: getQualityLabel(q),
+    })))
+    requestAnimationFrame(() => {
+      menuRef.current?.show(anchorRef.current)
+    })
+  }
+
   const handleMenuPress = ({ action }: typeof menus[number]) => {
     const selectInfo = selectInfoRef.current
+    if (action.startsWith('quality:')) {
+      const quality = action.slice('quality:'.length) as LX.Quality
+      const raw = selectInfo.single
+        ? [selectInfo.musicInfo]
+        : (selectInfo.selectedList.length ? selectInfo.selectedList : [selectInfo.musicInfo])
+      const targets = raw.filter(info => info.source != 'local')
+      if (targets.length) void downloadMusic(targets, quality)
+      return
+    }
     switch (action) {
       case 'play':
         props.onPlay(selectInfo)
@@ -112,6 +166,9 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
       case 'playLater':
         props.onPlayLater(selectInfo)
 
+        break
+      case 'download':
+        openQualityMenu()
         break
       case 'add':
         props.onAdd(selectInfo)

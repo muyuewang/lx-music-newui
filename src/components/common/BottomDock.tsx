@@ -110,10 +110,19 @@ const DockItem = memo(({ id, active, onPress }: {
           深色玻璃上没问题，切到浅色玻璃后白图标压白底直接消失。
           改用令牌后，深色=白、浅色=深墨，两侧都能读。 */}
       <Icon name={TAB_ICONS[id]} size={21} color={active ? palette.t1 : palette.t3} />
+      {/* 这里曾经只有 numberOfLines={1}、没有宽度约束，真机上报出
+          「打开没一会另两个 Tab 的文字变成 ...」：Text 在交叉轴上的宽度
+          由内容自适应，一旦测量发生在字号/布局还没稳定的时候（init 完成后
+          setFontSize 会整体重排一次），未选中的两项就被压到不足一个字宽，
+          RN 直接渲染成省略号；选中项因为 active 变化触发重渲染反而量对了。
+          修法不是换省略策略，而是把宽度钉死成「整个 item 宽」并居中：
+          测量结果不再依赖内容宽度，也就不存在被压扁的可能。 */}
       <Text
         size={11}
         color={active ? palette.t1 : palette.t3}
         numberOfLines={1}
+        ellipsizeMode="clip"
+        allowFontScaling={false}
         style={[styles.label, active ? styles.labelActive : undefined]}
       >
         {t(TAB_LABEL_KEY[id])}
@@ -243,7 +252,10 @@ const styles = StyleSheet.create({
     // 这里写死会盖掉浅色分支。
     borderWidth: StyleSheet.hairlineWidth,
   },
-  label: { marginTop: 3 },
+  // width:'100%' + textAlign:'center' 是修省略号的关键：
+  // 文本宽度从此等于 item 宽度（而非内容宽度），RN 的文本测量不会
+  // 因为父级 alignItems:'center' 把可用宽度算成 0 而退化成 "..."
+  label: { marginTop: 3, width: '100%', textAlign: 'center' },
   item: {
     flex: 1,
     height: '100%',

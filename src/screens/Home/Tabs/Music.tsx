@@ -38,6 +38,8 @@ import { toast } from '@/utils/tools'
 import { useStatusbarHeight } from '@/store/common/hook'
 import { useIsPlay, usePlayerMusicInfo, usePlayMusicInfo, useProgress, useStatusText } from '@/store/player/hook'
 import { playNext, playPrev, togglePlay, pause, collectMusic, uncollectMusic, retryCurrentMusic } from '@/core/player/player'
+import Menu, { type Menus, type MenuType } from '@/components/common/Menu'
+import { getAvailableQualitys, getQualityLabel } from '@/core/download'
 import { setVolume as setPlayerVolume } from '@/plugins/player'
 import { useLrcPlay, useLrcSet } from '@/plugins/lyric'
 import { useI18n } from '@/lang'
@@ -261,7 +263,40 @@ const MetaChips = themedMemo(({ color }: { color: string }) => {
   const playMusicInfo = usePlayMusicInfo()
   const raw = playMusicInfo.musicInfo as LX.Music.MusicInfo
   const isLove = useLoveState(raw?.id)
-  const quality = useMemo(() => {
+  const playQuality = useSettingValue('player.playQuality') as LX.Quality
+  const menuRef = useRef<MenuType>(null)
+  const chipRef = useRef<View>(null)
+
+  /**
+   * 可切换的音质档位。
+   *
+   * 分三种情况处理，因为它们的「音质」根本不是同一件事：
+   * - 本地文件：已经在设备上，档位由文件本身决定，没有可切换的余地；
+   * - 下载条目：同理由已落盘的文件决定；
+   * - 在线歌曲：才真正存在「换一个档位重新取地址」这个动作。
+   *
+   * 只有第三类返回非空 list，其余一律 null —— 回归成纯展示的 GlassChip。
+   */
+  const qualityInfo = useMemo(() => {
+    if (!raw) return null
+    // MusicInfoLocal 的 source 是 'local' 字面量，这一句之后 raw 自己就
+    // 收窄成 MusicInfoOnline 了 —— 不需要再写 `as` 断言。
+    // 之前写成 `raw as MusicInfoOnline` 反而骗过了 TS：它把 source 锁成
+    // 在线源联合（kw/kg/tx/wy/mg），下一行与 'local' 比较就被判定为
+    // 「无意义的比较」并报 TS2367。
+    if (raw.source === 'local') return null
+    const available = getAvailableQualitys(raw)
+    if (!available.length) return null
+    // 设置里存的档位这首歌不一定有（老歌常常只有 128k）。
+    // 此时显示实际会用的那一档，而不是把设置值硬贴上去 ——
+    // 否则用户会看到「Hi-Res」却听着 128k。
+    const active = available.includes(playQuality) ? playQuality : available[0]
+    return { label: getQualityLabel(active), list: available, active }
+  }, [raw, playQuality])
+
+  // 兜底的展示文案：非在线源（或音源未就绪拿不到档位表）时，
+  // 沿用按文件扩展名 / 可用档位推断出的概括性描述。
+  const fallbackQuality = useMemo(() => {
     if (!raw) return null
     const ext = (raw.meta as { ext?: string })?.ext?.toLowerCase()
     if (ext) {
@@ -274,11 +309,61 @@ const MetaChips = themedMemo(({ color }: { color: string }) => {
     if (types.some(q => LosslessQualitys.includes(q))) return 'SQ 无损'
     return types.includes('320k') ? 'HQ 高品' : '标准'
   }, [raw])
-  if (!quality && !isLove) return null
+
+  const menus = useMemo<Menus>(() => (
+    qualityInfo?.list.map(q => ({
+      action: `q:${q}`,
+      label: getQualityLabel(q),
+    })) ?? []
+  ), [qualityInfo])
+
+  const handleOpenQuality = useCallback(() => {
+    // 用 measureInWindow 而不是 onLayout：Menu 要的是屏幕绝对坐标，
+    // onLayout 给的是相对父容器的位置，页面有滚动偏移时会弹到别处去。
+    chipRef.current?.measureInWindow((x, y, w, h) => {
+      menuRef.current?.show({ x, y, w, h })
+    })
+  }, [])
+
+  const handleMenuPress = useCallback(({ action }: Menus[number]) => {
+    const quality = action.slice(2) as LX.Quality
+    if (quality === playQuality) return
+    updateSetting({ 'player.playQuality': quality })
+    // 改设置只影响「下一次取地址」，正在播的这一条不会自己换源。
+    // 必须主动重新解析，否则用户点了 Hi-Res 却仍在听 128k，
+    // 要等切歌才生效 —— 看起来就像切换没成功。
+    void retryCurrentMusic().catch(() => {})
+  }, [playQuality])
+
+  const label = qualityInfo?.label ?? fallbackQuality
+  if (!label && !isLove) return null
   return (
     <View style={styles.chipRow}>
-      {quality ? <GlassChip label={quality} icon="sd-card" color={color} /> : null}
+      {label
+        ? (qualityInfo
+            ? (
+                <Pressable
+                  ref={chipRef}
+                  onPress={handleOpenQuality}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('download_quality_select')}
+                >
+                  <GlassChip label={label} icon="sd-card" color={color} />
+                </Pressable>
+              )
+            : <GlassChip label={label} icon="sd-card" color={color} />)
+        : null}
       {isLove ? <GlassChip label={t('mine_my_love')} icon="love" color={color} /> : null}
+      {qualityInfo
+        ? (
+            <Menu
+              ref={menuRef}
+              menus={menus}
+              onPress={handleMenuPress}
+              activeId={`q:${qualityInfo.active}`}
+            />
+          )
+        : null}
     </View>
   )
 })

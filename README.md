@@ -10,7 +10,7 @@
 
 <br>
 
-![version](https://img.shields.io/badge/版本-1.9.6-B7A6FF?style=flat-square)
+![version](https://img.shields.io/badge/版本-1.9.7-B7A6FF?style=flat-square)
 ![platform](https://img.shields.io/badge/Android-5.0%2B-79E6FF?style=flat-square)
 ![license](https://img.shields.io/badge/许可-Apache--2.0-lightgrey?style=flat-square)
 
@@ -92,6 +92,27 @@
 
 ---
 
+## 音源：内置 8 个，开箱能搜能放
+
+一个音源挂掉，整个 App 就废了 —— 所以这里一次内置了 8 个：
+
+| 音源 | 说明 |
+| --- | --- |
+| **安妮独家音源** | 默认用这个，装完直接能听 |
+| 星海音乐源 | 全平台 24bit，网易/酷狗/QQ 支持母带 |
+| 墨澜聚合音源 | 全平台 FLAC，含汽水音乐 |
+| 回避聚合 | 多源融合，母带/全景声 |
+| 裤佬 SVIP 音源 | 安妮 + 星海二改整合 |
+| HelloWorld 音源 | 备用 |
+| HYWmusic 公益版 | 备用 |
+| 独家音源 | 备用 |
+
+全部**预装好、无需手动导入**。哪个觉得不好用，设置 → 自定义源里点一下就能换。
+
+> 音源是社区维护的，某个源偶尔抽风很正常。这也是为什么要内置 8 个而不是 1 个 —— 这个不行，换下一个。
+
+---
+
 ## 装到手机
 
 ### 直接安装
@@ -137,7 +158,7 @@ cd android
 
 **改了界面，没动能力。** 播放、搜索、歌单、音源这些核心功能全部沿用原版，重做的是外观和交互手感 —— 以及新加的下载功能。
 
-当前版本 **1.9.6**。
+当前版本 **1.9.7**。
 
 ---
 

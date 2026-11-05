@@ -29,6 +29,7 @@ const dislikeListPrefix = storageDataPrefix.dislikeList
 const userApiPrefix = storageDataPrefix.userApi
 const openStoragePathPrefix = storageDataPrefix.openStoragePath
 const selectedManagedFolderPrefix = storageDataPrefix.selectedManagedFolder
+const downloadListKey = storageDataPrefix.downloadList
 
 // const defaultListKey = listPrefix + 'default'
 // const loveListKey = listPrefix + 'love'
@@ -589,4 +590,30 @@ export const setUserApiAllowShowUpdateAlert = async(id: string, enable: boolean)
   if (!targetApi) return
   targetApi.allowShowUpdateAlert = enable
   await saveData(userApiPrefix, userApis)
+}
+
+/**
+ * 读取下载队列。
+ *
+ * 队列必须落盘，否则重启一次「已下载」就空了 —— 而文件其实还在私有目录里，
+ * 用户既看不到也播不了，等于每次启动都要重下一遍。
+ */
+export const getDownloadList = async(): Promise<LX.Download.ListItem[]> => {
+  return await getData<LX.Download.ListItem[]>(downloadListKey) ?? []
+}
+
+/**
+ * 保存下载队列。
+ *
+ * 必须节流：下载进度每 500ms 回调一次，每次都会触发
+ * downloadListChanged，不节流等于每秒往 AsyncStorage 写两遍整个队列
+ * （几十条记录、每条含完整 musicInfo），会明显拖慢主线程。
+ * 1000ms 的延迟对「重启后恢复」这个场景完全够用。
+ */
+const saveDownloadListThrottle = throttle((list: LX.Download.ListItem[]) => {
+  void saveData(downloadListKey, list)
+}, 1000)
+
+export const saveDownloadList = (list: LX.Download.ListItem[]) => {
+  saveDownloadListThrottle(list)
 }

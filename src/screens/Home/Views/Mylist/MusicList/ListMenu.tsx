@@ -78,7 +78,7 @@ export default forwardRef<ListMenuType, ListMenuProps>((props, ref) => {
       { action: 'playLater', label: t('play_later') },
       // 本地文件已经在设备上了，再「下载」它没有意义（只会复制一份）；
       // 也只有非本地源才有「选音质」这个概念。
-      { action: 'download', disabled: isLocal, label: t('download_quality_select') },
+      { action: 'download', disabled: isLocal, label: t('download') },
       { action: 'add', label: t('add_to') },
       { action: 'move', label: t('move_to') },
       { action: 'changePosition', label: t('change_position') },

@@ -39,7 +39,7 @@ import { useStatusbarHeight } from '@/store/common/hook'
 import { useIsPlay, usePlayerMusicInfo, usePlayMusicInfo, useProgress, useStatusText } from '@/store/player/hook'
 import { playNext, playPrev, togglePlay, pause, collectMusic, uncollectMusic, retryCurrentMusic } from '@/core/player/player'
 import Menu, { type Menus, type MenuType } from '@/components/common/Menu'
-import { getAvailableQualitys, getQualityLabel } from '@/core/download'
+import { getAvailableQualitys, getQualityLabel, downloadMusic } from '@/core/download'
 import { setVolume as setPlayerVolume } from '@/plugins/player'
 import { useLrcPlay, useLrcSet } from '@/plugins/lyric'
 import { useI18n } from '@/lang'
@@ -261,8 +261,17 @@ const useLoveState = (musicId: string | null | undefined) => {
 const MetaChips = themedMemo(({ color }: { color: string }) => {
   const t = useI18n()
   const playMusicInfo = usePlayMusicInfo()
-  const raw = playMusicInfo.musicInfo as LX.Music.MusicInfo
-  const isLove = useLoveState(raw?.id)
+  // ⚠️ 这里不能再写 `as LX.Music.MusicInfo`。
+  //
+  // PlayMusicInfo.musicInfo 的真实类型是
+  // `LX.Music.MusicInfo | LX.Download.ListItem`：播放下载队列里的条目时
+  // 拿到的是 ListItem，它只有 metadata、没有 meta 也没有 source。
+  // 之前用 as 断言把类型硬压成 MusicInfo，TS 就放行了 `raw.source` 与
+  // `getAvailableQualitys(raw)`，运行时却拿到一个没有 meta 的对象 ——
+  // 直接崩在 `Cannot read property '_qualitys' of undefined`。
+  // 保留联合类型，让下面的 `'progress' in raw` 真正起到收窄作用。
+  const raw = playMusicInfo.musicInfo
+  const isLove = useLoveState(raw?.id ?? undefined)
   const playQuality = useSettingValue('player.playQuality') as LX.Quality
   const menuRef = useRef<MenuType>(null)
   const chipRef = useRef<View>(null)
@@ -279,6 +288,9 @@ const MetaChips = themedMemo(({ color }: { color: string }) => {
    */
   const qualityInfo = useMemo(() => {
     if (!raw) return null
+    // `progress` 是 Download.ListItem 的必填字段，MusicInfo 里没有。
+    // 用它排除下载条目，之后 raw 才是真正的 MusicInfo。
+    if ('progress' in raw) return null
     // MusicInfoLocal 的 source 是 'local' 字面量，这一句之后 raw 自己就
     // 收窄成 MusicInfoOnline 了 —— 不需要再写 `as` 断言。
     // 之前写成 `raw as MusicInfoOnline` 反而骗过了 TS：它把 source 锁成
@@ -298,6 +310,9 @@ const MetaChips = themedMemo(({ color }: { color: string }) => {
   // 沿用按文件扩展名 / 可用档位推断出的概括性描述。
   const fallbackQuality = useMemo(() => {
     if (!raw) return null
+    // 同 qualityInfo：先排除下载条目，否则下面读 raw.meta 会 TS 报错
+    // （ListItem 没有 meta），运行时也可能拿到 undefined。
+    if ('progress' in raw) return null
     const ext = (raw.meta as { ext?: string })?.ext?.toLowerCase()
     if (ext) {
       if (LosslessQualitys.includes(ext)) return 'SQ 无损'
@@ -382,6 +397,71 @@ const VolumeRow = themedMemo(() => {
       <LiquidSlider value={volume} onChange={handleChange} onChangeEnd={handleChangeEnd} length={0} thickness={7} style={styles.volumeSlider} />
       <Icon name="volume-higt" size={16} color={TIDE_COLOR.t2} />
     </View>
+  )
+})
+
+/**
+ * 播放页的下载入口。
+ *
+ * 与列表页的「下载」菜单项复用同一套音质判定（getAvailableQualitys /
+ * getQualityLabel / downloadMusic），保证「播放页能下的档位」和
+ * 「列表里能下的档位」永远一致 —— 否则同一首歌在两个地方给出不同的选项。
+ *
+ * 三种情况不显示这个入口，因为它们都没有「再下一遍」的语义：
+ * - 当前播放的是下载队列里的条目（`progress` in musicInfo）：已经落盘；
+ * - 本地文件（source === 'local'）：音质由文件本身决定，不经过音源解析；
+ * - 拿不到任何可用档位（音源未就绪 / 老歌只有一种且不可用）。
+ */
+const DownloadBtn = themedMemo(() => {
+  const t = useI18n()
+  const playMusicInfo = usePlayMusicInfo()
+  const menuRef = useRef<MenuType>(null)
+  const btnRef = useRef<View>(null)
+
+  const target = useMemo(() => {
+    const raw = playMusicInfo.musicInfo as LX.Music.MusicInfo | LX.Download.ListItem | null
+    if (!raw) return null
+    // `progress` 是 ListItem 的必填字段，这一步同时起到类型收窄的作用：
+    // 排除之后 raw 一定是 LX.Music.MusicInfo（在线 + 本地两种）。
+    if ('progress' in raw) return null
+    if (raw.source === 'local') return null
+    const list = getAvailableQualitys(raw)
+    return list.length ? { info: raw, list } : null
+  }, [playMusicInfo.musicInfo])
+
+  const menus = useMemo<Menus>(() => (
+    target?.list.map(q => ({ action: `q:${q}`, label: getQualityLabel(q) })) ?? []
+  ), [target])
+
+  const handleOpen = useCallback(() => {
+    // 同 MetaChips：Menu 要的是窗口绝对坐标，measureInWindow 才能避开
+    // 页面滚动偏移，onLayout 拿到的是相对父容器的位置。
+    btnRef.current?.measureInWindow((x, y, w, h) => {
+      menuRef.current?.show({ x, y, w, h })
+    })
+  }, [])
+
+  const handlePress = useCallback(({ action }: Menus[number]) => {
+    if (!target) return
+    void downloadMusic([target.info], action.slice(2) as LX.Quality)
+  }, [target])
+
+  if (!target) return null
+
+  return (
+    <>
+      <Pressable
+        ref={btnRef}
+        onPress={handleOpen}
+        accessibilityRole="button"
+        accessibilityLabel={t('download')}
+        style={styles.toolBtn}
+      >
+        <Icon name="download-2" size={18} color={TIDE_COLOR.t2} />
+        <Text size={12} color={TIDE_COLOR.t2}>{t('download')}</Text>
+      </Pressable>
+      <Menu ref={menuRef} menus={menus} onPress={handlePress} />
+    </>
   )
 })
 
@@ -597,6 +677,7 @@ export default themedMemo(() => {
                 <Icon name="volume-higt" size={18} color={TIDE_COLOR.t2} />
                 <Text size={12} color={TIDE_COLOR.t2}>音量</Text>
               </Pressable>
+              <DownloadBtn />
             </View>
             {volumeVisible ? <VolumeRow /> : null}
           </View>

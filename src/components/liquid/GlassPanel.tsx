@@ -88,6 +88,19 @@ const styles = StyleSheet.create({
   },
   content: {
     // 让内容自然撑开；调用方需要撑满时自己给 flex。
-    flexGrow: 0,
+    //
+    // ⚠️ 这里绝对不能写 `flexGrow: 0`。
+    // RN Android 的 native props 按属性名字母序应用：
+    // `flex` 先于 `flexGrow`。调用方传 `{ flex: 1 }` 时，
+    // flex 会把 flexGrow/flexShrink/flexBasis 设成 1/1/0%；
+    // 紧接着本文件的 flexGrow:0 又把 grow 覆写回 0 ——
+    // 此时 flexBasis 仍是 0%、grow 已是 0，最终高度算出来是 **0**。
+    // 叠加调用方的 `overflow: 'hidden'`，整块内容被裁成一个字都看不见。
+    //
+    // 实测症状：菜单玻璃面板的材质、模糊、描边全部正常显示，
+    // 但面板内没有任何文字像素，只有背后列表被模糊出的亮斑 ——
+    // 因为内容层高度是 0，文字并未丢失，是被裁掉了。
+    //
+    // grow 的默认值本来就是 0，这行写与不写等价，直接删掉最安全。
   },
 })

@@ -24,6 +24,7 @@ import downloadState from '@/store/download/state'
 import settingState from '@/store/setting/state'
 import { downloadFile, stopDownload, mkdir, existsFile, unlink, privateStorageDirectoryPath } from '@/utils/fs'
 import { formatMusicName, toast } from '@/utils/tools'
+import { getDownloadList, saveDownloadList } from '@/utils/data'
 
 /** 下载根目录。首次下载时才创建，避免没下载过的用户平白多一个空目录。 */
 export const DOWNLOAD_DIR = `${privateStorageDirectoryPath}/download`
@@ -73,7 +74,16 @@ export const getQualityLabel = (quality: LX.Quality): string => {
  * 只看前者会在音源不支持无损时给出一个「能选但一下载就失败」的选项。
  */
 export const isQualityAvailable = (musicInfo: LX.Music.MusicInfoOnline, quality: LX.Quality): boolean => {
-  if (!musicInfo.meta._qualitys?.[quality]) return false
+  // 必须先判 meta 存在再读 _qualitys。
+  //
+  // 原因：这个函数会被「当前播放歌曲」直接调用，而 PlayMusicInfo.musicInfo
+  // 的类型是 `LX.Music.MusicInfo | LX.Download.ListItem` —— 播放下载队列
+  // 里的条目时传进来的是 ListItem，它只有 metadata、**没有 meta**。
+  // 原先写成 `musicInfo.meta._qualitys?.[quality]`，可选链只保护了
+  // _qualitys，没保护 meta，于是直接抛
+  // `TypeError: Cannot read property '_qualitys' of undefined`，
+  // 整个播放页弹「Unexpected error occurred」。
+  if (!musicInfo?.meta?._qualitys?.[quality]) return false
   const supported = global.lx.qualityList[musicInfo.source]
   // 音源初始化未完成时 supported 是 undefined，此时不拦，
   // 让用户先看到选项 —— 真的失败会在下载时报错，而不是提前把选项全灰掉。
@@ -375,4 +385,58 @@ export const downloadMusic = async(
   toast(num > 1
     ? global.i18n.t('download_added_count', { num })
     : global.i18n.t('download_added'))
+}
+
+/**
+ * 启动时恢复下载队列。
+ *
+ * 有两件事必须做：
+ *
+ * 1. **读回持久化的列表**。不恢复的话，磁盘上的文件还在，
+ *    「已下载」却永远是空的 —— 用户看不到、也播不了已经下好的歌。
+ *
+ * 2. **修正上次异常退出留下的状态**。进程被杀时内存里的 status 是
+ *    'run' 并已落盘，但重启后既没有 job、也没有 currentJob 持有它，
+ *    这条任务会永远卡在「下载中」，既不会被 startNext 捡起（它只找
+ *    waiting），也不会报错。统一改回 'waiting' 让它重新排队，
+ *   进度归零重下 —— 半截文件在 runTask 里本来就会先删掉。
+ *
+ * 已经 completed 的条目会再校验一次文件是否真的存在：
+ * 用户可能在文件管理器里清过目录，此时若还显示「已完成」，
+ * 点播放会拿到一个不存在的路径。
+ */
+export const initDownloadList = async() => {
+  const list = await getDownloadList()
+  if (!list.length) return
+
+  const fixed: LX.Download.ListItem[] = []
+  for (const item of list) {
+    if (item.status === 'completed') {
+      const exists = await existsFile(item.metadata.filePath).catch(() => false)
+      if (!exists) {
+        // 文件没了就不该留在队列里假装已完成，直接丢弃这一条。
+        continue
+      }
+      fixed.push(item)
+      continue
+    }
+    if (item.status === 'run') {
+      fixed.push({
+        ...item,
+        status: 'waiting',
+        statusText: global.i18n.t('download_status_waiting'),
+        progress: 0,
+        downloaded: 0,
+        speed: '',
+      })
+      continue
+    }
+    fixed.push(item)
+  }
+
+  downloadActions.setList(fixed)
+  // 落盘一次的代价远小于「重启后队列错乱」，这里同步写回修正后的状态。
+  saveDownloadList(fixed)
+  // 有 waiting 的说明上次没下完，接着排队跑。
+  if (fixed.some(item => item.status === 'waiting')) startNext()
 }

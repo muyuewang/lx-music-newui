@@ -78,6 +78,15 @@ export const storageDataPrefix = {
   dislikeList: '@dislike_list',
 
   userApi: '@user_api__',
+
+  /**
+   * 下载队列。
+   *
+   * 必须持久化：下载的文件实际落在应用私有目录，队列本身只是「索引」。
+   * 不存的话重启一次，磁盘上的文件还在、列表却空了 ——
+   * 用户既看不到已下载的歌，也播不了，等于每次启动都要重下一遍。
+   */
+  downloadList: '@download_list',
 } as const
 
 // v0.x.x 版本的 data keys

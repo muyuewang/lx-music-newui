@@ -8,6 +8,7 @@ import { bootLog } from '@/utils/bootLog'
 import { getDislikeInfo, setDislikeInfo } from '@/core/dislikeList'
 import { unlink } from '@/utils/fs'
 import { TEMP_FILE_PATH } from '@/utils/tools'
+import { initDownloadList } from '@/core/download'
 // import { play, playList } from '../player/player'
 
 // const initPrevPlayInfo = async(appSetting: LX.AppSetting) => {
@@ -31,6 +32,10 @@ export default async(appSetting: LX.AppSetting) => {
   setUserList(await getUserLists()) // 获取用户列表
   setDislikeInfo(await getDislikeInfo()) // 获取不喜欢列表
   bootLog('User list inited.')
+  // 恢复下载队列。必须在 i18n 之后 —— initDownloadList 里会调用
+  // global.i18n.t 重写状态文案，i18n 没就绪会拿到空串。
+  await initDownloadList().catch(() => {})
+  bootLog('Download list inited.')
   setNavActiveId((await getViewPrevState()).id)
   void unlink(TEMP_FILE_PATH)
   // await initPrevPlayInfo(appSetting).catch(err => log.error(err)) // 初始化上次的歌曲播放信息

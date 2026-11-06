@@ -11,6 +11,7 @@ import { scaleSizeH, scaleSizeW, setSpText } from './pixelRatio'
 import { toOldMusicInfo } from './index'
 import { stringMd5 } from 'react-native-quick-md5'
 import { windowSizeTools } from '@/utils/windowSizeTools'
+import { hasDialogHost, showDialog, waitForDialogHost } from '@/utils/dialogService'
 
 
 // https://stackoverflow.com/a/47349998
@@ -183,14 +184,68 @@ export const handleReadFile = async<T = unknown>(path: string): Promise<T> => {
   return data
 }
 
+/**
+ * 确认弹窗。
+ *
+ * 优先走应用内的主题化弹窗（`dialogService` + `DialogHost`），这样深色与
+ * 浅色主题下都是同一套玻璃材质；只有在还没有任何屏幕挂载、宿主不存在时
+ * （应用极早期、纯后台逻辑）才退回系统原生 `Alert`。
+ *
+ * 注意这里是 `await waitForDialogHost()` 而不是 `hasDialogHost()`：
+ * 首次播放触发的权限提示等场景，弹窗请求会比首屏挂载更早到达，
+ * 直接判断会误降级成白色系统框。等待一小段时间后绝大多数请求都能
+ * 走上主题化渲染，只有真正没有界面时才降级。
+ *
+ * **已有宿主时绝不能 await**：`async` 函数在第一个 `await` 之前是同步
+ * 执行的，一旦无条件 await，`showDialog` 就会被推到微任务。而调用方
+ * 常常是「同步弹出 → 紧接着同步关闭自己的浮层」，典型是 `Menu.menuPress`
+ * 里 `onPress()` 之后立刻 `onHide()`。顺序一旦反转成「先关菜单弹窗、
+ * 再开确认弹窗」，Android 上新 Modal 会被前一个的 dismiss 吞掉，
+ * 表现为确认框根本不出现。所以先同步判一次，只有确实没有宿主才等。
+ *
+ * 签名保持纯函数 + Promise 不变：调用点分布在 store / core / deeplink，
+ * 其中多处并不在 React 组件树里，不能改成组件。
+ */
 export const confirmDialog = async({
   title = '',
   message = '',
   cancelButtonText = global.i18n.t('dialog_cancel'),
   confirmButtonText = global.i18n.t('dialog_confirm'),
   bgClose = true,
+  /** 确认按钮是否按危险操作着色（删除类）。 */
+  danger = false,
+}: {
+  title?: string
+  message?: string
+  cancelButtonText?: string
+  confirmButtonText?: string
+  bgClose?: boolean
+  danger?: boolean
 }) => {
+  // 已有宿主时必须走同步路径：`||` 左侧为真就不会求值右侧的 await，
+  // 后面 showDialog 便在同一个 tick 内同步执行。详见本函数上方注释。
+  const useHost = hasDialogHost() || await waitForDialogHost()
   return new Promise<boolean>(resolve => {
+    if (useHost) {
+      let settled = false
+      const settle = (value: boolean) => {
+        if (settled) return
+        settled = true
+        resolve(value)
+      }
+      showDialog({
+        title,
+        message,
+        bgClose,
+        onDismiss: () => { settle(false) },
+        actions: [
+          { text: cancelButtonText, onPress: () => { settle(false) } },
+          { text: confirmButtonText, primary: true, danger, onPress: () => { settle(true) } },
+        ],
+      })
+      return
+    }
+
     Alert.alert(title, message, [
       {
         text: cancelButtonText,
@@ -213,13 +268,43 @@ export const confirmDialog = async({
   })
 }
 
+/**
+ * 提示弹窗（单按钮）。
+ *
+ * 与 `confirmDialog` 同一套策略：优先主题化弹窗，无宿主时退回原生 Alert。
+ */
 export const tipDialog = async({
   title = '',
   message = '',
   btnText = global.i18n.t('dialog_confirm'),
   bgClose = true,
+}: {
+  title?: string
+  message?: string
+  btnText?: string
+  bgClose?: boolean
 }) => {
+  const useHost = hasDialogHost() || await waitForDialogHost()
   return new Promise<void>(resolve => {
+    if (useHost) {
+      let settled = false
+      const settle = () => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
+      showDialog({
+        title,
+        message,
+        bgClose,
+        onDismiss: settle,
+        actions: [
+          { text: btnText, primary: true, onPress: settle },
+        ],
+      })
+      return
+    }
+
     Alert.alert(title, message, [
       {
         text: btnText,
@@ -246,36 +331,61 @@ export const checkNotificationPermission = async() => {
   if (isHide != null) return
   const enabled = await isNotificationsEnabled()
   if (enabled) return
+  // 首次播放时这条提示会比首屏挂载更早触发，必须等宿主就绪；
+  // 已有宿主则同步取真值，不跨 await。见 confirmDialog 上方注释。
+  const useHost = hasDialogHost() || await waitForDialogHost()
   return new Promise<void>((resolve) => {
+    const title = global.i18n.t('notifications_check_title')
+    const message = global.i18n.t('notifications_check_tip')
+    const onNeverShow = () => {
+      void saveData(storageDataPrefix.notificationTipEnable, '1')
+      toast(global.i18n.t('disagree_tip'))
+      resolve()
+    }
+    const onDisagree = () => {
+      toast(global.i18n.t('disagree_tip'))
+      resolve()
+    }
+    const onAgree = () => {
+      requestAnimationFrame(() => {
+        void requestNotificationPermission().then((result) => {
+          if (!result) toast(global.i18n.t('disagree_tip'))
+          resolve()
+        })
+      })
+    }
+
+    // 优先应用内主题化弹窗，宿主不存在时退回系统原生（见 confirmDialog 注释）。
+    if (useHost) {
+      showDialog({
+        title,
+        message,
+        bgClose: false,
+        onDismiss: onDisagree,
+        actions: [
+          { text: global.i18n.t('never_show'), onPress: onNeverShow },
+          { text: global.i18n.t('disagree'), onPress: onDisagree },
+          { text: global.i18n.t('agree_go'), primary: true, onPress: onAgree },
+        ],
+      })
+      return
+    }
+
     Alert.alert(
-      global.i18n.t('notifications_check_title'),
-      global.i18n.t('notifications_check_tip'),
+      title,
+      message,
       [
         {
           text: global.i18n.t('never_show'),
-          onPress: () => {
-            void saveData(storageDataPrefix.notificationTipEnable, '1')
-            toast(global.i18n.t('disagree_tip'))
-            resolve()
-          },
+          onPress: onNeverShow,
         },
         {
           text: global.i18n.t('disagree'),
-          onPress: () => {
-            toast(global.i18n.t('disagree_tip'))
-            resolve()
-          },
+          onPress: onDisagree,
         },
         {
           text: global.i18n.t('agree_go'),
-          onPress: () => {
-            requestAnimationFrame(() => {
-              void requestNotificationPermission().then((result) => {
-                if (!result) toast(global.i18n.t('disagree_tip'))
-                resolve()
-              })
-            })
-          },
+          onPress: onAgree,
         },
       ],
     )
@@ -288,36 +398,60 @@ export const checkIgnoringBatteryOptimization = async() => {
   if (isHide != null) return
   const enabled = await isIgnoringBatteryOptimization()
   if (enabled) return
+  // 同 checkNotificationPermission：等宿主挂载，避免降级成白色系统框；
+  // 已有宿主则同步取真值，不跨 await。
+  const useHost = hasDialogHost() || await waitForDialogHost()
   return new Promise<void>((resolve) => {
+    const title = global.i18n.t('ignoring_battery_optimization_check_title')
+    const message = global.i18n.t('ignoring_battery_optimization_check_tip')
+    const onNeverShow = () => {
+      void saveData(storageDataPrefix.ignoringBatteryOptimizationTipEnable, '1')
+      toast(global.i18n.t('disagree_tip'))
+      resolve()
+    }
+    const onDisagree = () => {
+      toast(global.i18n.t('disagree_tip'))
+      resolve()
+    }
+    const onAgree = () => {
+      requestAnimationFrame(() => {
+        void requestIgnoreBatteryOptimization().then((result) => {
+          if (!result) toast(global.i18n.t('disagree_tip'))
+          resolve()
+        })
+      })
+    }
+
+    if (useHost) {
+      showDialog({
+        title,
+        message,
+        bgClose: false,
+        onDismiss: onDisagree,
+        actions: [
+          { text: global.i18n.t('never_show'), onPress: onNeverShow },
+          { text: global.i18n.t('disagree'), onPress: onDisagree },
+          { text: global.i18n.t('agree_to'), primary: true, onPress: onAgree },
+        ],
+      })
+      return
+    }
+
     Alert.alert(
-      global.i18n.t('ignoring_battery_optimization_check_title'),
-      global.i18n.t('ignoring_battery_optimization_check_tip'),
+      title,
+      message,
       [
         {
           text: global.i18n.t('never_show'),
-          onPress: () => {
-            void saveData(storageDataPrefix.ignoringBatteryOptimizationTipEnable, '1')
-            toast(global.i18n.t('disagree_tip'))
-            resolve()
-          },
+          onPress: onNeverShow,
         },
         {
           text: global.i18n.t('disagree'),
-          onPress: () => {
-            toast(global.i18n.t('disagree_tip'))
-            resolve()
-          },
+          onPress: onDisagree,
         },
         {
           text: global.i18n.t('agree_to'),
-          onPress: () => {
-            requestAnimationFrame(() => {
-              void requestIgnoreBatteryOptimization().then((result) => {
-                if (!result) toast(global.i18n.t('disagree_tip'))
-                resolve()
-              })
-            })
-          },
+          onPress: onAgree,
         },
       ],
     )

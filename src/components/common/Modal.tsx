@@ -1,5 +1,5 @@
 // import { createStyle } from '@/utils/tools'
-import { useImperativeHandle, forwardRef, useState, useMemo } from 'react'
+import { useImperativeHandle, forwardRef, useState, useMemo, useRef } from 'react'
 import { Modal, TouchableWithoutFeedback, View, type ModalProps as _ModalProps } from 'react-native'
 import { useStatusbarHeight } from '@/store/common/hook'
 // import { useWindowSize } from '@/utils/hooks'
@@ -54,16 +54,30 @@ export default forwardRef<ModalType, ModalProps>(({
   ...props
 }: ModalProps, ref) => {
   const [visible, setVisible] = useState(false)
+  /**
+   * 可见状态的**同步镜像**，专供 `setVisible` 做重复调用判断。
+   *
+   * 为什么不能直接用闭包里的 `visible`：`useImperativeHandle` 的闭包只在
+   * 渲染时更新，而「关掉 A → 立刻打开 B」这种同步连续调用发生在同一次
+   * 渲染之间。此时闭包里的 `visible` 还是上一次渲染的 true，
+   * 第二次 `setVisible(true)` 会被判定为「值没变」直接 return ——
+   * 表现为后一个弹窗根本不出现。
+   *
+   * ref 的更新是同步的，能正确反映「刚刚被关掉」这个中间状态。
+   */
+  const visibleRef = useRef(false)
   // const { window: windowSize } = useWindowSize()
   const statusBarHeight = useStatusbarHeight()
   const handleRequestClose = () => {
     if (keyHide) {
+      visibleRef.current = false
       setVisible(false)
       onHide()
     }
   }
   const handleBgClose = () => {
     if (bgHide) {
+      visibleRef.current = false
       setVisible(false)
       onHide()
     }
@@ -71,7 +85,8 @@ export default forwardRef<ModalType, ModalProps>(({
 
   useImperativeHandle(ref, () => ({
     setVisible(_visible) {
-      if (visible == _visible) return
+      if (visibleRef.current == _visible) return
+      visibleRef.current = _visible
       setVisible(_visible)
       if (!_visible) onHide()
     },

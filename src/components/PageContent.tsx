@@ -7,6 +7,7 @@ import { useMemo } from 'react'
 import { scaleSizeAbsHR } from '@/utils/pixelRatio'
 import { defaultHeaders } from './common/Image'
 import SizeView from './SizeView'
+import DialogHost from './common/DialogHost'
 import { useBgPic } from '@/store/common/hook'
 
 interface Props {
@@ -74,6 +75,15 @@ export default ({ children }: Props) => {
     <>
       <SizeView />
       {pic ? picComponent : themeComponent}
+      {/*
+        全局主题化弹窗宿主。
+
+        挂在这里而不是每个功能自己渲染：`confirmDialog` / `tipDialog` 是
+        纯函数，调用点遍布 store / core / deeplink，其中多处不在组件树内，
+        没法让调用方自己挂弹窗。每个屏幕经过 PageContent 就自动获得一个
+        宿主，服务层会把请求交给最上层的那个。
+      */}
+      <DialogHost />
     </>
   )
 }

@@ -27,6 +27,8 @@ import {
   getQualityLabel,
   pauseDownload,
   removeDownload,
+  pauseAllDownloads,
+  retryFailedDownloads,
   resumeDownload,
 } from '@/core/download'
 import { playList, playListById } from '@/core/player/player'
@@ -123,8 +125,11 @@ const DownloadRow = themedMemo(({ item, onPlay, isPlaying }: {
         break
       case 'remove':
         void confirmDialog({
-          message: t('download_delete'),
-          confirmButtonText: t('download_delete'),
+          title: t('download_delete'),
+          message: t('download_delete_confirm', { name: item.metadata.musicInfo.name }),
+          confirmButtonText: t('download_delete_files'),
+          // 会一并删除本地音频文件且不可撤销，按危险操作着色。
+          danger: true,
         }).then(isRemove => {
           if (isRemove) void removeDownload(item.id)
         })
@@ -132,7 +137,7 @@ const DownloadRow = themedMemo(({ item, onPlay, isPlaying }: {
       default:
         break
     }
-  }, [item.id, onPlay, t])
+  }, [item.id, item.metadata.musicInfo.name, onPlay, t])
 
   return (
     <TouchableOpacity
@@ -201,7 +206,8 @@ const DownloadRow = themedMemo(({ item, onPlay, isPlaying }: {
                 <Text
                   size={TIDE_TYPE.eyebrow.size}
                   color={isError ? palette.pink : palette.t3}
-                  numberOfLines={1}
+                  numberOfLines={isError ? 2 : 1}
+                  style={styles.statusText}
                 >
                   {item.statusText}
                 </Text>
@@ -260,11 +266,25 @@ export default themedMemo(({ onBack }: { onBack: () => void }) => {
     () => list.filter(item => item.status === 'completed'),
     [list],
   )
-  const activeCount = useMemo(
-    () => list.filter(item => item.status !== 'completed').length,
-    [list],
-  )
   const playingId = playMusicInfo.musicInfo?.id ?? null
+  const runningCount = list.filter(item => item.status === 'run').length
+  const waitingCount = list.filter(item => item.status === 'waiting').length
+  const pausedCount = list.filter(item => item.status === 'pause').length
+  const failedCount = list.filter(item => item.status === 'error').length
+  const canPause = list.some(item => item.status === 'run' || item.status === 'waiting')
+  const menuRef = useRef<MenuType>(null)
+  const moreRef = useRef<View>(null)
+  const headerMenus = useMemo<Menus>(() => [
+    { action: 'retry_failed', label: t('download_retry_failed'), disabled: failedCount === 0 },
+    { action: 'pause_all', label: t('download_pause_all'), disabled: !canPause },
+    { action: 'clear_completed', label: t('download_clear_completed'), disabled: completedList.length === 0, danger: true, dividerBefore: true },
+  ], [canPause, completedList.length, failedCount, t])
+
+  const handleOpenHeaderMenu = useCallback(() => {
+    moreRef.current?.measureInWindow((x, y, w, h) => {
+      menuRef.current?.show({ x, y, w, h })
+    })
+  }, [])
 
   const handlePlay = useCallback((id: string) => {
     void playListById(LIST_IDS.DOWNLOAD, id)
@@ -293,12 +313,31 @@ export default themedMemo(({ onBack }: { onBack: () => void }) => {
     if (clearing) return
     setClearing(true)
     void confirmDialog({
-      message: t('download_clear_completed'),
-      confirmButtonText: t('download_clear_completed'),
+      title: t('download_clear_completed'),
+      message: t('download_clear_completed_confirm', { num: completedList.length }),
+      confirmButtonText: t('download_delete_files'),
+      // 批量删除本地文件且不可撤销，按危险操作着色。
+      danger: true,
     }).then(isClear => {
       if (isClear) void clearCompleted()
     }).finally(() => { setClearing(false) })
-  }, [clearing, t])
+  }, [clearing, completedList.length, t])
+
+  const handleHeaderMenu = useCallback(({ action }: Menus[number]) => {
+    switch (action) {
+      case 'retry_failed':
+        retryFailedDownloads()
+        break
+      case 'pause_all':
+        pauseAllDownloads()
+        break
+      case 'clear_completed':
+        handleClear()
+        break
+      default:
+        break
+    }
+  }, [handleClear])
 
   return (
     <View style={styles.container}>
@@ -312,9 +351,10 @@ export default themedMemo(({ onBack }: { onBack: () => void }) => {
           {completedList.length
             ? <GlassIconButton icon="eraser" size={38} iconSize={15} onPress={handleClear} />
             : null}
-          <GlassIconButton icon="dots-vertical" size={38} iconSize={15} onPress={() => {}} />
+          <GlassIconButton ref={moreRef} icon="dots-vertical" size={38} iconSize={15} onPress={handleOpenHeaderMenu} />
         </View>
       </View>
+      <Menu ref={menuRef} menus={headerMenus} onPress={handleHeaderMenu} width={scaleSizeW(190)} />
 
       {/* Hero：大标题 + 副标题 + 操作行，与参考图左图一致。 */}
       <View style={styles.hero}>
@@ -326,7 +366,7 @@ export default themedMemo(({ onBack }: { onBack: () => void }) => {
           {t('mine_downloaded')}
         </Text>
         <Text size={TIDE_TYPE.body.size} color={palette.t3} style={styles.heroSub}>
-          {t('download_offline_subtitle', { num: list.length })}
+          {t('download_offline_subtitle', { num: completedList.length })}
         </Text>
 
         <View style={styles.actionRow}>
@@ -362,13 +402,20 @@ export default themedMemo(({ onBack }: { onBack: () => void }) => {
           </LiquidButton>
         </View>
 
-        {activeCount > 0
-          ? (
-              <Text size={TIDE_TYPE.foot.size} color={palette.t3} style={styles.activeTip}>
-                {t('download_status_run')} · {activeCount}
-              </Text>
-            )
-          : null}
+        <View style={styles.activeTip}>
+          {runningCount > 0
+            ? <Text size={TIDE_TYPE.foot.size} color={palette.t3}>{t('download_status_run')} · {runningCount}  </Text>
+            : null}
+          {waitingCount > 0
+            ? <Text size={TIDE_TYPE.foot.size} color={palette.t3}>{t('download_status_waiting')} · {waitingCount}  </Text>
+            : null}
+          {pausedCount > 0
+            ? <Text size={TIDE_TYPE.foot.size} color={palette.t3}>{t('download_status_pause')} · {pausedCount}  </Text>
+            : null}
+          {failedCount > 0
+            ? <Text size={TIDE_TYPE.foot.size} color={palette.pink}>{t('download_status_error')} · {failedCount}</Text>
+            : null}
+        </View>
       </View>
 
       {list.length
@@ -534,7 +581,12 @@ const styles = createThemedStyle(() => StyleSheet.create({
     gap: 8,
   },
   nums: {
+    flexShrink: 0,
     fontVariant: ['tabular-nums'],
+  },
+  statusText: {
+    flexGrow: 1,
+    flexShrink: 1,
   },
   empty: {
     flex: 1,

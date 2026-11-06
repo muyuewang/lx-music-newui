@@ -1,9 +1,9 @@
-import { memo, type ReactNode } from 'react'
+import { memo, forwardRef, type ReactNode } from 'react'
 import {
   Animated,
   Pressable,
   StyleSheet,
-  View,
+  type View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native'
@@ -69,7 +69,7 @@ interface Props {
  * 而 Android 的 shadow 也依赖同一套裁剪 —— 阴影会被一起裁掉。
  * 把阴影提到外层容器上，两者就互不干扰。
  */
-export default memo(({
+export default memo(forwardRef<View, Props>(({
   children,
   onPress,
   onLongPress,
@@ -91,7 +91,7 @@ export default memo(({
   style,
   contentStyle,
   hitSlop,
-}: Props) => {
+}, ref) => {
   const { scale, pressIn, pressOut } = usePressScale(SPRING.press, pressScale)
 
   const surface = (
@@ -120,7 +120,7 @@ export default memo(({
   // 表现为「点玻璃珠没反应，点珠子旁边的空白才切 tab」。
   if (!onPress && !onLongPress && !onPressIn && !onPressOut) {
     return (
-      <Animated.View style={[styles.outer, { transform: [{ scale }] }, style]}>
+      <Animated.View ref={ref} style={[styles.outer, { transform: [{ scale }] }, style]}>
         {surface}
       </Animated.View>
     )
@@ -128,6 +128,7 @@ export default memo(({
 
   return (
     <Pressable
+      ref={ref}
       onPress={onPress}
       onLongPress={onLongPress}
       onPressIn={() => { pressIn(); onPressIn?.() }}
@@ -146,7 +147,7 @@ export default memo(({
       </Animated.View>
     </Pressable>
   )
-})
+}))
 
 const styles = StyleSheet.create({
   // 外层只负责投影，不裁剪内容

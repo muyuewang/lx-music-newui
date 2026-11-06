@@ -177,6 +177,7 @@ const runTask = async(id: string) => {
 
   const { musicInfo, quality, filePath } = item.metadata
 
+  let downloadStarted = false
   try {
     await ensureDir()
 
@@ -219,6 +220,7 @@ const runTask = async(id: string) => {
       },
     })
     jobId = downloadResult.jobId
+    downloadStarted = true
     currentJob = { id, jobId }
 
     const result = await downloadResult.promise
@@ -236,18 +238,24 @@ const runTask = async(id: string) => {
       throw new Error(`HTTP ${result.statusCode}`)
     }
   } catch (err: any) {
-    currentJob = null
+    if (downloadStarted) currentJob = null
     // 主动暂停时原生 stopDownload 会让 promise 以失败结算。
     // 这时不能把状态改回 error —— 用户点的是「暂停」，
     // 假装成失败会让队列里出现一个看似需要重试的红条。
     const latest = downloadState.list.find(i => i.id === id)
-    if (latest?.status === 'pause') return
+    if (latest?.status === 'pause') {
+      // 若尚未启动原生下载，stopDownload 不会产生失败回调，需手动让出队列。
+      if (!downloadStarted) startNext()
+      return
+    }
 
     console.log('download failed', err)
+    const reason = err instanceof Error ? err.message : String(err)
     downloadActions.updateItem(id, {
       status: 'error',
       speed: '',
-      statusText: global.i18n.t('download_status_error'),
+      // 保留可操作的诊断信息；不能再用通用「下载失败」覆盖真实原因。
+      statusText: `${global.i18n.t('download_status_error')} · ${reason}`,
     })
   } finally {
     // 无论成功失败都接着跑下一个，否则队列会因为一个坏任务整条停住。
@@ -346,6 +354,20 @@ export const resumeDownload = (id: string) => {
     speed: '',
   })
   startNext()
+}
+
+/** 暂停队列中的全部运行或等待任务。 */
+export const pauseAllDownloads = () => {
+  for (const item of downloadState.list) {
+    if (item.status === 'run' || item.status === 'waiting') pauseDownload(item.id)
+  }
+}
+
+/** 重试全部失败任务；runTask 每次仍会串行执行。 */
+export const retryFailedDownloads = () => {
+  for (const item of downloadState.list) {
+    if (item.status === 'error') resumeDownload(item.id)
+  }
 }
 
 /** 删除任务（同时清掉已下载的文件）。 */

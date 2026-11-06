@@ -27,12 +27,13 @@ import { confirmDialog, exitApp as backHome } from '@/utils/tools'
 import { exitApp } from '@/core/common'
 import { getListMusics } from '@/utils/data'
 import { scaleSizeH, scaleSizeW } from '@/utils/pixelRatio'
+import Mylist from '../Views/Mylist'
 import MusicList from '../Views/Mylist/MusicList'
 import Setting from '../Views/Setting'
 import Download from '../Views/Download'
 import { useDownloadCount } from '@/store/download/hook'
 
-type SubView = 'home' | 'list' | 'setting' | 'download'
+type SubView = 'home' | 'list' | 'playlists' | 'setting' | 'download'
 
 /**
  * 资料库入口（SPEC §6 的四宫格变体）：玻璃圆 + 图标 + 计数 + 标签。
@@ -164,8 +165,25 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (view: SubView, listId?: stri
   const userLists = lists.slice(2)
 
   useEffect(() => {
-    void getListMusics(LIST_IDS.LOVE).then(m => { setLoveCount(m.length) })
-    void getListMusics(LIST_IDS.DEFAULT).then(m => { setDefaultCount(m.length) })
+    let active = true
+    const refreshCounts = async() => {
+      const [loveMusics, defaultMusics] = await Promise.all([
+        getListMusics(LIST_IDS.LOVE),
+        getListMusics(LIST_IDS.DEFAULT),
+      ])
+      if (!active) return
+      setLoveCount(loveMusics.length)
+      setDefaultCount(defaultMusics.length)
+    }
+    const handleListUpdate = (ids: string[]) => {
+      if (ids.includes(LIST_IDS.LOVE) || ids.includes(LIST_IDS.DEFAULT)) void refreshCounts()
+    }
+    void refreshCounts()
+    global.app_event.on('myListMusicUpdate', handleListUpdate)
+    return () => {
+      active = false
+      global.app_event.off('myListMusicUpdate', handleListUpdate)
+    }
   }, [])
 
   const handleExit = () => {
@@ -218,10 +236,10 @@ const HomeView = themedMemo(({ onOpen }: { onOpen: (view: SubView, listId?: stri
             onPress={() => { onOpen('list', LIST_IDS.LOVE) }}
           />
           <QuickEntry
-            icon="album"
+            icon="list-order"
             count={userLists.length}
-            label={t('mine_album')}
-            onPress={() => { onOpen('list', LIST_IDS.DEFAULT) }}
+            label={t('mine_my_playlist')}
+            onPress={() => { onOpen('playlists') }}
           />
           <QuickEntry
             icon="download-2"
@@ -336,6 +354,25 @@ const SettingView = themedMemo(({ onBack }: { onBack: () => void }) => {
   )
 })
 
+const PlaylistManageView = themedMemo(({ onBack }: { onBack: () => void }) => {
+  const t = useI18n()
+  const { contentBottom } = useDockLayout()
+  useEffect(() => {
+    global.app_event.changeLoveListVisible(true)
+    return () => { global.app_event.changeLoveListVisible(false) }
+  }, [])
+
+  return (
+    <View style={styles.container}>
+      <StatusBar />
+      <SubHeader title={t('mine_my_playlist')} onBack={onBack} />
+      <View style={[styles.flex, { paddingBottom: contentBottom }]}>
+        <Mylist />
+      </View>
+    </View>
+  )
+})
+
 /**
  * 已下载。
  *
@@ -382,6 +419,7 @@ export default themedMemo(() => {
 
   switch (view) {
     case 'list': return <ListView onBack={handleBack} />
+    case 'playlists': return <PlaylistManageView onBack={handleBack} />
     case 'setting': return <SettingView onBack={handleBack} />
     case 'download': return <DownloadView onBack={handleBack} />
     default: return <HomeView onOpen={handleOpen} />

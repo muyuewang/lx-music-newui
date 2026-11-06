@@ -1,5 +1,5 @@
-import { memo } from 'react'
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
+import { memo, forwardRef } from 'react'
+import { StyleSheet, type View, type StyleProp, type ViewStyle } from 'react-native'
 
 import { Icon } from '@/components/common/Icon'
 import LiquidButton from './LiquidButton'
@@ -25,7 +25,7 @@ interface Props {
  * 页面头部的搜索 / 更多、播放页顶部返回、资料库的排序入口全部用它，
  * 保证「同一层级的圆形按钮」在全 App 只有一个尺寸和一种材质。
  */
-export default memo(({
+export default memo(forwardRef<View, Props>(({
   icon,
   onPress,
   iconSize = 18,
@@ -34,7 +34,7 @@ export default memo(({
   color,
   tint,
   style,
-}: Props) => {
+}, ref) => {
   // 同 GlassChip：不能把 TIDE_COLOR.t1 当参数默认值。
   // 本组件是 memo 的，切主题时父级不会重新调用它，
   // 参数默认值也就不会重新求值 —— 图标会一直保持切换前的颜色。
@@ -43,6 +43,7 @@ export default memo(({
 
   return (
     <LiquidButton
+      ref={ref}
       radius={999}
       onPress={onPress}
       tint={tint}
@@ -58,7 +59,7 @@ export default memo(({
       <Icon name={icon} size={iconSize} color={resolvedColor} />
     </LiquidButton>
   )
-})
+}))
 
 const styles = StyleSheet.create({
   content: {

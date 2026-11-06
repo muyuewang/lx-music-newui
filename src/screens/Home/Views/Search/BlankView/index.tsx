@@ -2,7 +2,7 @@ import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 import { useSettingValue } from '@/store/setting/hook'
 import { useTheme } from '@/store/theme/hook'
-import { useUserApiList } from '@/store/userApi'
+import { useStatus, useUserApiList } from '@/store/userApi'
 import { setNavActiveId } from '@/core/common'
 import { createStyle } from '@/utils/tools'
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react'
@@ -23,25 +23,28 @@ export interface BlankViewType {
 }
 
 /**
- * 未导入音源时的引导卡片。
+ * 当前没有可用音源时的引导卡片。
  *
- * 洛雪移动版的内置音源只提供搜索/歌词，播放地址必须由自定义源返回
- * （见 src/utils/musicSdk/api-source-info.ts，sources 为空数组）。
- * 没有自定义源时点击歌曲只会失败，用户很难自己反应过来该去哪设置，
- * 所以在搜索页空状态直接给出入口。
+ * 内置脚本仅加载成功不代表能取得音频 URL；初始化失败时应引导选择或修复音源，
+ * 而不是笼统要求用户重新导入。
  */
 const NoSourceTip = () => {
   const t = useI18n()
   const userApiList = useUserApiList()
   const theme = useTheme()
 
+  const apiStatus = useStatus()
   const hasNoSource = useMemo(() => !userApiList.length, [userApiList])
+  const titleKey = hasNoSource ? 'search_no_source_title' : 'search_unavailable_source_title'
+  const descKey = hasNoSource ? 'search_no_source_desc' : 'search_unavailable_source_desc'
+  const buttonKey = hasNoSource ? 'search_no_source_btn' : 'search_unavailable_source_btn'
 
   const openSetting = () => {
     setNavActiveId('nav_setting')
   }
 
-  if (!hasNoSource) return null
+  // 仅在当前音源不可用时展示引导。内置脚本初始化失败时，不能继续提示用户「尚未导入」。
+  if (!hasNoSource && apiStatus.status) return null
 
   return (
     <View style={[styles.tipCard, styles.tipRow, { backgroundColor: theme['c-button-background'] }, isLiquidGlass(theme) && styles.tideTip]}>
@@ -49,11 +52,11 @@ const NoSourceTip = () => {
         <Icon name="add-music" size={16} color={isLiquidGlass(theme) ? TIDE_COLOR.a2 : theme['c-primary-font']} />
       </View>
       <View style={styles.tipTextContent}>
-        <Text size={TIDE_TYPE.body.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t1 : theme['c-font']}>{t('search_no_source_title')}</Text>
-        <Text style={styles.tipDesc} size={TIDE_TYPE.foot.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-font-label']}>{t('search_no_source_desc')}</Text>
+        <Text size={TIDE_TYPE.body.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t1 : theme['c-font']}>{t(titleKey)}</Text>
+        <Text style={styles.tipDesc} size={TIDE_TYPE.foot.size} color={isLiquidGlass(theme) ? TIDE_COLOR.t3 : theme['c-font-label']}>{t(descKey)}</Text>
       </View>
       <TouchableOpacity style={styles.tipBtn} onPress={openSetting}>
-        <Text size={TIDE_TYPE.foot.size} color={isLiquidGlass(theme) ? TIDE_COLOR.a2 : theme['c-primary-font']}>{t('search_no_source_btn')}</Text>
+        <Text size={TIDE_TYPE.foot.size} color={isLiquidGlass(theme) ? TIDE_COLOR.a2 : theme['c-primary-font']}>{t(buttonKey)}</Text>
       </TouchableOpacity>
     </View>
   )

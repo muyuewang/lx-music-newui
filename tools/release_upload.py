@@ -13,7 +13,8 @@ import urllib.error
 import urllib.request
 
 REPO = 'muyuewang/lx-music-newui'
-TAG = 'v1.9.7'
+TAG = 'v1.9.8'
+RELEASE_NAME = 'v1.9.8 · 弹窗全量主题化'
 API = 'https://api.github.com'
 
 PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -75,7 +76,7 @@ def main():
     st, res = call('POST', f'{API}/repos/{REPO}/releases', {
         'tag_name': TAG,
         'target_commitish': 'master',
-        'name': f'{TAG} · 内置 8 个音源',
+        'name': RELEASE_NAME,
         'body': body,
         'draft': False,
         'prerelease': False,
